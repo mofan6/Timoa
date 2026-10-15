@@ -3,6 +3,8 @@
 <p align="center">A lightweight countdown timer, alarm clock and focus timer for Windows.</p>
 <p align="center"><a href="README.md">简体中文</a> · <a href="https://github.com/mofan6/Timoa/releases/latest">Download</a> · <a href="https://github.com/mofan6/Timoa/issues">Issues</a></p>
 
+![Timoa interface: settings, focus timer, alarms and weekly schedule](assets/screenshot.png)
+
 ## Download
 
 **Windows 10 / 11, x64.** No separate .NET, VC++, Java or WebView2 runtime installation is required.
