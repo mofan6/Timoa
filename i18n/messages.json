@@ -1,0 +1,854 @@
+{
+  "Microsoft YaHei UI": [
+    "Microsoft JhengHei UI",
+    "Segoe UI"
+  ],
+  "语言": [
+    "語言",
+    "Language"
+  ],
+  "简体中文": [
+    "简体中文",
+    "简体中文"
+  ],
+  "繁體中文": [
+    "繁體中文",
+    "繁體中文"
+  ],
+  "专注计时 · 从容计划": [
+    "專注計時 · 從容計畫",
+    "Focus · Plan"
+  ],
+  "专注计时、闹钟计划与每周安排。": [
+    "專注計時、鬧鐘計畫與每週安排。",
+    "Focus timers, alarms and weekly plans."
+  ],
+  "倒计时": [
+    "倒數計時",
+    "Timers"
+  ],
+  "闹钟计划": [
+    "鬧鐘計畫",
+    "Alarms"
+  ],
+  "一周": [
+    "一週",
+    "Week"
+  ],
+  "设置": [
+    "設定",
+    "Settings"
+  ],
+  "专注计时": [
+    "專注計時",
+    "Focus timer"
+  ],
+  "点击数字，滑动设定": [
+    "點選數字，滑動設定",
+    "Click to set time"
+  ],
+  "{} 分钟": [
+    "{} 分鐘",
+    "{} min"
+  ],
+  "{} 项": [
+    "{} 項",
+    "{} total"
+  ],
+  "{count} 项": [
+    "{count} 項",
+    "{count} planned"
+  ],
+  "本轮目标，例如：英语阅读 2 篇": [
+    "本輪目標，例如：英文閱讀 2 篇",
+    "Session goal, e.g. two reading passages"
+  ],
+  "开始专注": [
+    "開始專注",
+    "Start"
+  ],
+  "我的计时": [
+    "我的計時",
+    "My timers"
+  ],
+  "准备好就开始": [
+    "準備好就開始",
+    "Ready when you are"
+  ],
+  "给每道题，留一段专注的时间": [
+    "給每道題，留一段專注的時間",
+    "Make time for focused practice"
+  ],
+  "选一个时长，计时从这里开始。": [
+    "選一個時長，計時從這裡開始。",
+    "Choose a duration to begin."
+  ],
+  "再来一轮": [
+    "再來一輪",
+    "Again"
+  ],
+  "继续": [
+    "繼續",
+    "Resume"
+  ],
+  "暂停": [
+    "暫停",
+    "Pause"
+  ],
+  "重置": [
+    "重設",
+    "Reset"
+  ],
+  "移除": [
+    "移除",
+    "Remove"
+  ],
+  "+  新建": [
+    "+  新增",
+    "+  Add"
+  ],
+  "下一项提醒": [
+    "下一項提醒",
+    "Next reminder"
+  ],
+  "添加一个闹钟，安排下一段时间": [
+    "新增鬧鐘，安排下一段時間",
+    "Add an alarm to plan your next session"
+  ],
+  "让计划，准时发生": [
+    "讓計畫，準時發生",
+    "Keep your plans on time"
+  ],
+  "添加一次提醒，或设置每周重复的学习计划。": [
+    "新增一次提醒，或設定每週重複的學習計畫。",
+    "Add a one-time reminder or a weekly study plan."
+  ],
+  "新建第一个闹钟": [
+    "新增第一個鬧鐘",
+    "Add your first alarm"
+  ],
+  "启用闹钟": [
+    "啟用鬧鐘",
+    "Enable alarm"
+  ],
+  "编辑": [
+    "編輯",
+    "Edit"
+  ],
+  "删除": [
+    "刪除",
+    "Delete"
+  ],
+  "当日安排": [
+    "當日安排",
+    "Daily agenda"
+  ],
+  "这一天，留给你的计划": [
+    "這一天，留給你的計畫",
+    "A day for your plans"
+  ],
+  "重复闹钟与单次提醒会显示在这里。": [
+    "重複鬧鐘與單次提醒會顯示在這裡。",
+    "Your scheduled reminders appear here."
+  ],
+  "声音与提醒": [
+    "聲音與提醒",
+    "Sounds & alerts"
+  ],
+  "新倒计时的默认提示音": [
+    "新倒數計時的預設提示音",
+    "Default sound for new timers"
+  ],
+  "自定义提示音": [
+    "自訂提示音",
+    "Custom sound"
+  ],
+  "尚未选择提示音": [
+    "尚未選擇提示音",
+    "No custom sound selected"
+  ],
+  "选择音频…": [
+    "選擇音訊…",
+    "Choose audio…"
+  ],
+  "试听": [
+    "試聽",
+    "Preview"
+  ],
+  "MP3、M4A、FLAC、OGG 等常见格式，导入时自动转换。": [
+    "MP3、M4A、FLAC、OGG 等常見格式，匯入時自動轉換。",
+    "MP3, M4A, FLAC, OGG and more. Converted on import."
+  ],
+  "正在导入音频…": [
+    "正在匯入音訊…",
+    "Importing audio…"
+  ],
+  "取消": [
+    "取消",
+    "Cancel"
+  ],
+  "开机启动": [
+    "開機啟動",
+    "Launch at sign-in"
+  ],
+  "登录 Windows 后，在托盘中等待提醒。": [
+    "登入 Windows 後，在系統匣中等待提醒。",
+    "Start in the system tray when you sign in."
+  ],
+  "数据与备份": [
+    "資料與備份",
+    "Data & backups"
+  ],
+  "导出备份…": [
+    "匯出備份…",
+    "Export…"
+  ],
+  "导入备份…": [
+    "匯入備份…",
+    "Import…"
+  ],
+  "清除全部计划": [
+    "清除全部計畫",
+    "Clear all plans"
+  ],
+  "恢复默认设置": [
+    "還原預設設定",
+    "Reset settings"
+  ],
+  "打开数据文件夹": [
+    "開啟資料資料夾",
+    "Open data folder"
+  ],
+  "关于 Timoa": [
+    "關於 Timoa",
+    "About Timoa"
+  ],
+  "关闭窗口后，在托盘中继续计时": [
+    "關閉視窗後，在系統匣中繼續計時",
+    "Timers keep running in the tray"
+  ],
+  "编辑闹钟": [
+    "編輯鬧鐘",
+    "Edit alarm"
+  ],
+  "新建闹钟": [
+    "新增鬧鐘",
+    "New alarm"
+  ],
+  "编辑这项安排": [
+    "編輯這項安排",
+    "Edit this reminder"
+  ],
+  "为下一段时间做个安排": [
+    "為下一段時間做個安排",
+    "Plan your next session"
+  ],
+  "闹钟名称，例如：开始数学真题": [
+    "鬧鐘名稱，例如：開始數學練習",
+    "Alarm name, e.g. maths practice"
+  ],
+  "开始时间 · 点击后滑动选择": [
+    "開始時間 · 點選後滑動選擇",
+    "Start time · click to choose"
+  ],
+  "重复": [
+    "重複",
+    "Repeat"
+  ],
+  "仅一次": [
+    "僅一次",
+    "Once"
+  ],
+  "每天": [
+    "每天",
+    "Every day"
+  ],
+  "工作日": [
+    "平日",
+    "Weekdays"
+  ],
+  "周末": [
+    "週末",
+    "Weekends"
+  ],
+  "自定义": [
+    "自訂",
+    "Custom"
+  ],
+  "日期": [
+    "日期",
+    "Date"
+  ],
+  "一": [
+    "一",
+    "Mon"
+  ],
+  "二": [
+    "二",
+    "Tue"
+  ],
+  "三": [
+    "三",
+    "Wed"
+  ],
+  "四": [
+    "四",
+    "Thu"
+  ],
+  "五": [
+    "五",
+    "Fri"
+  ],
+  "六": [
+    "六",
+    "Sat"
+  ],
+  "日": [
+    "日",
+    "Sun"
+  ],
+  "周一": [
+    "週一",
+    "Mon"
+  ],
+  "周二": [
+    "週二",
+    "Tue"
+  ],
+  "周三": [
+    "週三",
+    "Wed"
+  ],
+  "周四": [
+    "週四",
+    "Thu"
+  ],
+  "周五": [
+    "週五",
+    "Fri"
+  ],
+  "周六": [
+    "週六",
+    "Sat"
+  ],
+  "周日": [
+    "週日",
+    "Sun"
+  ],
+  "设置结束时间": [
+    "設定結束時間",
+    "Set end time"
+  ],
+  "提示音": [
+    "提示音",
+    "Sound"
+  ],
+  "提前 5 分钟提醒": [
+    "提前 5 分鐘提醒",
+    "Notify 5 minutes early"
+  ],
+  "提前五分钟提醒": [
+    "提前五分鐘提醒",
+    "Notify five minutes early"
+  ],
+  "保存修改": [
+    "儲存變更",
+    "Save"
+  ],
+  "添加闹钟": [
+    "新增鬧鐘",
+    "Add alarm"
+  ],
+  "Timoa 提醒": [
+    "Timoa 提醒",
+    "Timoa reminder"
+  ],
+  "+ 5 分钟": [
+    "+ 5 分鐘",
+    "+ 5 min"
+  ],
+  "知道了": [
+    "知道了",
+    "Dismiss"
+  ],
+  "确定": [
+    "確定",
+    "Confirm"
+  ],
+  "同时导入设置": [
+    "同時匯入設定",
+    "Also import settings"
+  ],
+  "第三方许可证": [
+    "第三方授權條款",
+    "Third-party licenses"
+  ],
+  "关闭": [
+    "關閉",
+    "Close"
+  ],
+  "请选择": [
+    "請選擇",
+    "Select"
+  ],
+  "小时": [
+    "小時",
+    "Hours"
+  ],
+  "分钟": [
+    "分鐘",
+    "Minutes"
+  ],
+  "秒": [
+    "秒",
+    "Seconds"
+  ],
+  "滑动选择时间": [
+    "滑動選擇時間",
+    "Scroll to choose a time"
+  ],
+  "静音": [
+    "靜音",
+    "Silent"
+  ],
+  "轻柔铃声": [
+    "輕柔鈴聲",
+    "Soft chime"
+  ],
+  "马林巴琴": [
+    "馬林巴琴",
+    "Marimba"
+  ],
+  "钟声": [
+    "鐘聲",
+    "Bell"
+  ],
+  "钢琴旋律": [
+    "鋼琴旋律",
+    "Piano jingle"
+  ],
+  "电钢琴旋律": [
+    "電鋼琴旋律",
+    "Electric piano"
+  ],
+  "铃声旋律": [
+    "鈴聲旋律",
+    "Bell jingle"
+  ],
+  "自定义（请先导入）": [
+    "自訂（請先匯入）",
+    "Custom (import first)"
+  ],
+  "未命名闹钟": [
+    "未命名鬧鐘",
+    "Untitled alarm"
+  ],
+  " · 提前提醒": [
+    " · 提前提醒",
+    " · Early notice"
+  ],
+  " · 至 {:02}:{:02}": [
+    " · 至 {:02}:{:02}",
+    " · Until {:02}:{:02}"
+  ],
+  "已完成": [
+    "已完成",
+    "Finished"
+  ],
+  "已暂停": [
+    "已暫停",
+    "Paused"
+  ],
+  "进行中": [
+    "進行中",
+    "Running"
+  ],
+  "今天": [
+    "今天",
+    "Today"
+  ],
+  "明天": [
+    "明天",
+    "Tomorrow"
+  ],
+  "快捷键被占用，可从托盘唤起": [
+    "快速鍵已被佔用，可從系統匣開啟",
+    "Shortcut busy; use the tray icon"
+  ],
+  "请至少选择一个重复日期。": [
+    "請至少選擇一個重複日期。",
+    "Choose at least one day to repeat."
+  ],
+  "日期格式为 YYYY-MM-DD，例如 2026-10-16。": [
+    "日期格式為 YYYY-MM-DD，例如 2026-10-16。",
+    "Use YYYY-MM-DD, for example 2026-10-16."
+  ],
+  "请选择将来的日期与时间。": [
+    "請選擇將來的日期與時間。",
+    "Choose a date and time in the future."
+  ],
+  "无法安排这个时间，请重新选择。": [
+    "無法安排這個時間，請重新選擇。",
+    "This time cannot be scheduled. Choose another."
+  ],
+  "结束时间需要晚于开始时间，且在同一天。": [
+    "結束時間必須晚於開始時間，且在同一天。",
+    "The end time must be later on the same day."
+  ],
+  "请先在设置中导入自定义提示音。": [
+    "請先在設定中匯入自訂提示音。",
+    "Import a custom sound in Settings first."
+  ],
+  "导入这份备份？": [
+    "匯入這份備份？",
+    "Import this backup?"
+  ],
+  "导入备份": [
+    "匯入備份",
+    "Import backup"
+  ],
+  "备份中有 {} 项闹钟与 {} 项倒计时。当前数据会先保存一份临时备份，然后由这些计划替换。": [
+    "備份中有 {} 項鬧鐘與 {} 項倒數計時。會先備份目前資料，再以這些計畫取代。",
+    "This backup contains {} alarms and {} timers. Current data will be backed up before these plans replace it."
+  ],
+  "清除全部计划？": [
+    "清除全部計畫？",
+    "Clear all plans?"
+  ],
+  "将清除全部闹钟和倒计时，此操作无法撤销。": [
+    "將清除全部鬧鐘和倒數計時，此操作無法復原。",
+    "All alarms and timers will be removed. This cannot be undone."
+  ],
+  "清除计划": [
+    "清除計畫",
+    "Clear plans"
+  ],
+  "恢复默认设置？": [
+    "還原預設設定？",
+    "Reset settings?"
+  ],
+  "界面和提示音偏好将恢复默认，开机启动将关闭。已有闹钟与倒计时会继续保留。": [
+    "介面和提示音偏好將還原預設，開機啟動將關閉。已有鬧鐘與倒數計時會保留。",
+    "Preferences will reset and launch at sign-in will be disabled. Existing alarms and timers will be kept."
+  ],
+  "恢复默认": [
+    "還原預設",
+    "Reset"
+  ],
+  "删除这项闹钟？": [
+    "刪除這項鬧鐘？",
+    "Delete this alarm?"
+  ],
+  "删除后，这项安排将不再提醒。": [
+    "刪除後，這項安排將不再提醒。",
+    "You will no longer be reminded of this plan."
+  ],
+  "删除闹钟": [
+    "刪除鬧鐘",
+    "Delete alarm"
+  ],
+  "导入已停止，无法创建当前数据的备份：{error}": [
+    "匯入已停止，無法建立目前資料的備份：{error}",
+    "Import stopped: could not back up current data: {error}"
+  ],
+  "备份已导入。": [
+    "備份已匯入。",
+    "Backup imported."
+  ],
+  "已清除全部计划。": [
+    "已清除全部計畫。",
+    "All plans cleared."
+  ],
+  "已恢复默认设置。": [
+    "已還原預設設定。",
+    "Settings reset."
+  ],
+  "选择自定义提示音": [
+    "選擇自訂提示音",
+    "Choose a custom sound"
+  ],
+  "音频文件": [
+    "音訊檔案",
+    "Audio files"
+  ],
+  "所有文件": [
+    "所有檔案",
+    "All files"
+  ],
+  "导出 Timoa 备份": [
+    "匯出 Timoa 備份",
+    "Export Timoa backup"
+  ],
+  "Timoa 备份": [
+    "Timoa 備份",
+    "Timoa backup"
+  ],
+  "备份已导出。自定义音频需单独保存。": [
+    "備份已匯出。自訂音訊需另外儲存。",
+    "Backup exported. Back up your custom audio separately."
+  ],
+  "导出失败：{error}": [
+    "匯出失敗：{error}",
+    "Export failed: {error}"
+  ],
+  "导入 Timoa 备份": [
+    "匯入 Timoa 備份",
+    "Import Timoa backup"
+  ],
+  "备份文件超过 5 MB。": [
+    "備份檔案超過 5 MB。",
+    "The backup file exceeds 5 MB."
+  ],
+  "无法移除提示音文件，请检查文件是否被占用。": [
+    "無法移除提示音檔案，請檢查檔案是否正在使用。",
+    "Cannot remove the sound file. It may be in use."
+  ],
+  "音频转换任务意外结束。": [
+    "音訊轉換工作意外結束。",
+    "The audio conversion ended unexpectedly."
+  ],
+  "Timoa · {count} 项计时 · {}": [
+    "Timoa · {count} 項計時 · {}",
+    "Timoa · {count} active · {}"
+  ],
+  "Timoa 无法启动：{error}": [
+    "Timoa 無法啟動：{error}",
+    "Timoa could not start: {error}"
+  ],
+  "未能保存数据，请检查磁盘空间与文件夹权限。": [
+    "未能儲存資料，請檢查磁碟空間與資料夾權限。",
+    "Could not save data. Check disk space and folder permissions."
+  ],
+  "离开期间有 {missed} 项倒计时已结束。": [
+    "離開期間有 {missed} 項倒數計時已結束。",
+    "While you were away, {missed} timers finished."
+  ],
+  "离开期间错过了 {missed} 项闹钟，已更新到下一次计划。": [
+    "離開期間錯過了 {missed} 項鬧鐘，已更新至下一次計畫。",
+    "You missed {missed} alarms. Recurring alarms have been rescheduled."
+  ],
+  "请设置大于零、最多 99 小时的倒计时。": [
+    "請設定大於零、最多 99 小時的倒數計時。",
+    "Choose a duration greater than zero and under 100 hours."
+  ],
+  "最多同时保留 100 项倒计时，请先移除已完成项目。": [
+    "最多可保留 100 項倒數計時，請先移除已完成項目。",
+    "You can keep up to 100 timers. Remove some finished timers first."
+  ],
+  "时间到了": [
+    "時間到了",
+    "Time is up"
+  ],
+  "这一轮专注已完成。": [
+    "這一輪專注已完成。",
+    "Your focus session is complete."
+  ],
+  "还有 5 分钟": [
+    "還有 5 分鐘",
+    "5 minutes to go"
+  ],
+  "闹钟提醒": [
+    "鬧鐘提醒",
+    "Alarm reminder"
+  ],
+  "计划的时间到了。": [
+    "計畫的時間到了。",
+    "It is time for your plan."
+  ],
+  "备份文件超过 5 MB，无法读取。": [
+    "備份檔案超過 5 MB，無法讀取。",
+    "Cannot read backups larger than 5 MB."
+  ],
+  "这不是有效的 Timoa 备份文件。": [
+    "這不是有效的 Timoa 備份檔案。",
+    "This is not a valid Timoa backup file."
+  ],
+  "备份数据不完整。": [
+    "備份資料不完整。",
+    "The backup data is incomplete."
+  ],
+  "无法识别这个文件，请选择 Timoa 导出的 JSON 备份。": [
+    "無法識別這個檔案，請選擇 Timoa 匯出的 JSON 備份。",
+    "Unrecognized file. Choose a JSON backup exported by Timoa."
+  ],
+  "本地数据无法读取，已保留损坏文件副本。": [
+    "無法讀取本機資料，已保留損壞檔案的副本。",
+    "Local data could not be read. A copy of the damaged file was saved."
+  ],
+  "已从上一版复制设置与 {} 项闹钟。": [
+    "已複製既有設定與 {} 項鬧鐘。",
+    "Copied existing settings and {} alarms."
+  ],
+  "没有可写入的文件夹。": [
+    "沒有可寫入的資料夾。",
+    "No writable folder is available."
+  ],
+  "无法创建保存目录：{e}": [
+    "無法建立儲存目錄：{e}",
+    "Cannot create the save folder: {e}"
+  ],
+  "无法保存文件：{}": [
+    "無法儲存檔案：{}",
+    "Cannot save the file: {}"
+  ],
+  "无法读取内置提示音。": [
+    "無法讀取內建提示音。",
+    "Cannot read the built-in sound."
+  ],
+  "提示音内容为空或已损坏。": [
+    "提示音內容為空或已損壞。",
+    "The sound is empty or damaged."
+  ],
+  "Windows 无法播放这段提示音，请重新导入。": [
+    "Windows 無法播放這段提示音，請重新匯入。",
+    "Windows cannot play this sound. Please import it again."
+  ],
+  "无法准备音频组件：{e}": [
+    "無法準備音訊元件：{e}",
+    "Cannot prepare the audio component: {e}"
+  ],
+  "内置音频组件损坏，请重新下载程序。": [
+    "內建音訊元件已損壞，請重新下載程式。",
+    "The built-in audio component is damaged. Download the app again."
+  ],
+  "已取消导入。": [
+    "已取消匯入。",
+    "Import cancelled."
+  ],
+  "音频组件路径无效。": [
+    "音訊元件路徑無效。",
+    "The audio component path is invalid."
+  ],
+  "找不到所选音频，请重新选择。": [
+    "找不到所選音訊，請重新選擇。",
+    "The selected audio could not be found. Choose it again."
+  ],
+  "请选择非空、大小不超过 512 MB 的音频文件。": [
+    "請選擇非空且不超過 512 MB 的音訊檔案。",
+    "Choose a non-empty audio file no larger than 512 MB."
+  ],
+  "无法创建提示音目录：{e}": [
+    "無法建立提示音目錄：{e}",
+    "Cannot create the sound folder: {e}"
+  ],
+  "无法启动内置音频组件：{e}": [
+    "無法啟動內建音訊元件：{e}",
+    "Cannot start the built-in audio component: {e}"
+  ],
+  "转换超过 5 分钟，已停止。请先剪辑需要用作铃声的片段。": [
+    "轉換超過 5 分鐘，已停止。請先剪輯要用作鈴聲的片段。",
+    "Conversion stopped after 5 minutes. Trim the audio to a shorter clip first."
+  ],
+  "这是音乐平台的加密下载文件，请使用可通用播放的 MP3、FLAC 等文件。": [
+    "這是音樂平台的加密下載檔案，請使用通用的 MP3、FLAC 等檔案。",
+    "This is an encrypted music download. Use a standard MP3, FLAC or another unencrypted file."
+  ],
+  "无法解码这个文件，可能已严重损坏或使用不支持的编码。详细信息已保存到日志。": [
+    "無法解碼此檔案，可能已損壞或使用不支援的編碼。詳細資訊已儲存至日誌。",
+    "Cannot decode this file. It may be damaged or use an unsupported codec. Details were saved to the log."
+  ],
+  "没有生成可播放音频。": [
+    "未產生可播放的音訊。",
+    "No playable audio was generated."
+  ],
+  "所选文件没有可播放的音轨。": [
+    "所選檔案沒有可播放的音軌。",
+    "The selected file has no playable audio track."
+  ],
+  "转换后的音频超过 512 MB，请先剪辑较短的铃声片段。": [
+    "轉換後的音訊超過 512 MB，請先剪輯較短的鈴聲片段。",
+    "Converted audio exceeds 512 MB. Trim it to a shorter clip first."
+  ],
+  "已导入，可点击试听。": [
+    "已匯入，可點選試聽。",
+    "Imported. Click Preview to listen."
+  ],
+  "已导入。文件含可恢复的格式错误，请试听确认。": [
+    "已匯入。檔案含可復原的格式錯誤，請試聽確認。",
+    "Imported with recoverable format errors. Preview the sound to check it."
+  ],
+  "无法建立程序实例锁。": [
+    "無法建立程式執行個體鎖。",
+    "Cannot create the application instance lock."
+  ],
+  "无法建立托盘消息窗口。": [
+    "無法建立系統匣訊息視窗。",
+    "Cannot create the system tray message window."
+  ],
+  "Timoa · 专注此刻": [
+    "Timoa · 專注此刻",
+    "Timoa · Focus on now"
+  ],
+  "打开 Timoa": [
+    "開啟 Timoa",
+    "Open Timoa"
+  ],
+  "退出": [
+    "結束",
+    "Quit"
+  ],
+  "无法修改开机启动设置。": [
+    "無法變更開機啟動設定。",
+    "Cannot change the launch at sign-in setting."
+  ],
+  "未能保存开机启动设置。": [
+    "未能儲存開機啟動設定。",
+    "Could not save the launch at sign-in setting."
+  ],
+  "停止": [
+    "停止",
+    "Stop"
+  ],
+  "总专注时长": [
+    "總專注時長",
+    "Total focus time"
+  ],
+  "累计已完成的专注计时，删除记录后仍会保留。": [
+    "累計已完成的專注計時，刪除記錄後仍會保留。",
+    "Completed focus sessions stay counted even after records are removed."
+  ],
+  "外观": [
+    "外觀",
+    "Appearance"
+  ],
+  "深色": [
+    "深色",
+    "Dark"
+  ],
+  "浅色": [
+    "淺色",
+    "Light"
+  ],
+  "+ 导入音频": [
+    "+ 匯入音訊",
+    "+ Import audio"
+  ],
+  "文件缺失": [
+    "檔案遺失",
+    "Missing file"
+  ],
+  "可连续导入多段音频，分别试听和删除。": [
+    "可連續匯入多段音訊，分別試聽和刪除。",
+    "Import multiple sounds, preview and remove them individually."
+  ],
+  "最多保留 1000 段自定义提示音。": [
+    "最多保留 1000 段自訂提示音。",
+    "You can keep up to 1,000 custom sounds."
+  ],
+  "已删除提示音，使用它的计划已改为静音。": [
+    "已刪除提示音，使用它的計畫已改為靜音。",
+    "Sound removed. Plans using it are now silent."
+  ],
+  "请等待音频导入完成后，再导入备份。": [
+    "請等待音訊匯入完成後，再匯入備份。",
+    "Wait for audio import to finish before restoring a backup."
+  ],
+  "导入失败，当前计划未更改：{error}": [
+    "匯入失敗，目前計畫未變更：{error}",
+    "Import failed. Your current plans were not changed: {error}"
+  ],
+  "无法更新 Windows 的启动许可，请在任务管理器中启用 Timoa。": [
+    "無法更新 Windows 的啟動許可，請在工作管理員中啟用 Timoa。",
+    "Unable to update Windows startup approval. Enable Timoa in Task Manager."
+  ]
+}

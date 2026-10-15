@@ -1,0 +1,37 @@
+{
+  "name": "Timoa",
+  "version": "1.0.1",
+  "date": "2026-10-15",
+  "platform": "Windows 10/11 x64",
+  "runtime": "Rust 1.99.0, statically linked Windows GNU CRT",
+  "ui": "Slint 1.18.1, winit/FemtoVG with software fallback",
+  "languages": [
+    "简体中文",
+    "繁體中文",
+    "English"
+  ],
+  "defaultLanguage": "简体中文",
+  "artifacts": [
+    {
+      "file": "Timoa-Setup.exe",
+      "sha256": "9C870A259FD76934F37FD88D6EC9029E5F997919F0B66FFF49DE1763006C0E32",
+      "bytes": 9071201
+    },
+    {
+      "file": "Timoa.exe",
+      "sha256": "A96F361C594EC0D187661A61EF2EEA5D9BFAEEBF91ADAD52E628E8424424BA4C",
+      "bytes": 8900096
+    }
+  ],
+  "review": [
+    "Backup import/export and Windows startup reviewed in source code; corrective changes documented in docs/代码审查.md",
+    "Release EXE and NSIS installer compiled successfully",
+    "Source files included in the delivery archive"
+  ],
+  "interactionTests": "No actual backup restore, startup registry change, installation, uninstallation or Windows restart verification performed, as requested.",
+  "stage": "Released",
+  "packer": "Official UPX 5.1.0, icons and relocations preserved",
+  "installer": "NSIS 3.11, Modern UI 2, zlib",
+  "repository": "https://github.com/mofan6/Timoa",
+  "release": "https://github.com/mofan6/Timoa/releases/tag/v1.0.1"
+}

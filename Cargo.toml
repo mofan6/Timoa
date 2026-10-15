@@ -1,0 +1,35 @@
+[package]
+name = "timoa"
+version = "1.0.1"
+edition = "2024"
+license = "Apache-2.0"
+build = "build.rs"
+description = "Timoa：独立、轻量的中文计时与闹钟"
+
+[dependencies]
+slint = { version = "=1.18.1", default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-femtovg", "renderer-software", "accessibility", "raw-window-handle-06"] }
+raw-window-handle = "0.6"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+rfd = { version = "0.15", default-features = false }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_System_Registry", "Win32_System_Com", "Win32_Storage_FileSystem", "Win32_Media_Audio", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_Security"] }
+
+[build-dependencies]
+serde_json = "1"
+slint-build = "=1.18.1"
+winresource = "0.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = 0
+
+[[bin]]
+name = "Timoa"
+path = "src/main.rs"

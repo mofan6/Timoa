@@ -1,0 +1,32 @@
+Timoa 1.0.1 / 2026-10-15
+
+应用源码：Apache License 2.0（见 LICENSE）
+界面设计署名：Designed By MOTAN
+
+致谢：Malin Fossum（GitHub: @malinfossum）及 Tidsro 项目，提供最初灵感与内置铃声。
+Acknowledgements: @malinfossum and Tidsro for the initial inspiration and built-in chimes.
+https://github.com/malinfossum/tidsro
+
+功能包括计时器、闹钟、每周计划、数据迁移、音频导入与 Windows 托盘。
+应用调用的系统字体属于 Windows，不随软件重新分发。
+
+Slint 1.18.1：采用 Slint Royalty-free Desktop, Mobile, and Web Applications
+License 2.0。设置 → 关于中保留官方 AboutSlint 署名组件。
+完整文本见 licenses/Slint-Royalty-free-2.0.md。
+
+FFmpeg：应用内包含可替换的音频解码组件，采用 LGPL 2.1 或更高版本，
+未启用 GPL / nonfree。许可与构建说明见 licenses/FFmpeg-NOTICE.txt。
+对应源码、构建脚本、配置选项在本版本源码包 third-party/FFmpeg 中。
+可将兼容的 ffmpeg.exe 及其依赖放在主程序旁的 codecs 目录中替换内置组件。
+不使用网络音频解码，不修改导入的原文件。
+
+其他 Rust 依赖、Windows GNU 运行时的许可见 licenses 目录。
+单 EXE 已嵌入许可资料，可在设置 → 关于 → 第三方许可证中打开。
+
+发布 EXE 使用官方未修改的 UPX 5.1.0 压缩，GPL-2.0+ 及其压缩程序特别许可。
+原生程序启动时在内存中解压，不需要安装 UPX，不另行展开主程序副本。
+UPX：https://github.com/upx/upx/releases/tag/v5.1.0
+许可见 licenses/UPX-License.txt 与 UPX-GPL-2.0.txt。
+
+安装程序使用官方 NSIS 3.11 / Modern UI 2 和 zlib 压缩，许可见 licenses/NSIS.txt。
+沿用素材的 Apache 版权声明见 licenses/Apache-2.0.txt。

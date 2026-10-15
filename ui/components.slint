@@ -1,0 +1,385 @@
+import { ScrollView, Palette } from "std-widgets.slint";
+
+export global Theme {
+    in-out property<bool> dark: true;
+    changed dark => { Palette.color-scheme = self.dark ? ColorScheme.dark : ColorScheme.light; }
+    out property<color> bg: dark ? #0a0a0a : #f5f4f0;
+    out property<color> panel: dark ? #141414 : #ffffff;
+    out property<color> card: dark ? #1b1b1b : #ffffff;
+    out property<color> elevated: dark ? #252525 : #eeece6;
+    out property<color> control: dark ? #101010 : #faf9f6;
+    out property<color> hover: dark ? #2c2a25 : #eeeae0;
+    out property<color> pressed: dark ? #363126 : #e4ddcd;
+    out property<color> line: dark ? #343434 : #ddd9d0;
+    out property<color> input-line: dark ? #41403c : #d2cec4;
+    out property<color> text: dark ? #f4f1ec : #29251e;
+    out property<color> muted: dark ? #b0a9a0 : #6b655b;
+    out property<color> faint: dark ? #938d85 : #797267;
+    out property<color> gold: #e3b341;
+    out property<color> accent-text: dark ? #e3b341 : #886218;
+    out property<color> accent-line: dark ? #e3b34150 : #b68a2b55;
+    out property<color> selection: dark ? #e3b3411e : #e3b34122;
+    out property<color> selection-hover: dark ? #e3b34132 : #e3b34138;
+    out property<color> hero: dark ? #1e1c17 : #fffbef;
+    out property<color> danger: dark ? #d9736a : #ba4438;
+}
+
+export component PageScroll inherits ScrollView {
+    horizontal-scrollbar-policy: always-off;
+    mouse-drag-pan-enabled: false;
+    content-width: self.width;
+    VerticalLayout {
+        padding-right: 20px;
+        @children
+    }
+}
+
+export component ActionButton inherits Rectangle {
+    in property<string> label;
+    in property<bool> primary: false;
+    in property<bool> quiet: false;
+    in property<bool> danger: false;
+    in property<bool> enabled: true;
+    in property<bool> selected: false;
+    in property<bool> navigation: false;
+    property<bool> pointer-focus: false;
+    out property<bool> hovered: touch.has-hover;
+    out property<bool> pressed: touch.pressed;
+    in property<length> text-size: 13px;
+    in property<int> text-weight: root.primary ? 500 : 400;
+    callback clicked();
+    min-width: 48px;
+    min-height: 36px;
+    preferred-height: 40px;
+    border-radius: 10px;
+    border-width: root.navigation || root.selected || keyboard.has-focus ? 0.75px : root.quiet || root.primary ? 0px : 0.8px;
+    border-color: root.selected || (keyboard.has-focus && (!root.navigation || !root.pointer-focus)) ? Theme.accent-line : root.navigation ? transparent : Theme.input-line;
+    opacity: root.enabled ? 1 : 0.4;
+    // A tab has one persistent selection tint. Mouse press and focus must not
+    // retarget that tint several times while the destination page is created.
+    background: root.navigation ? (root.selected ? Theme.selection : touch.has-hover ? Theme.hover : transparent)
+        : root.primary ? (touch.pressed ? #cba039 : touch.has-hover ? #edc258 : Theme.gold)
+        : touch.pressed ? Theme.pressed : root.selected ? (touch.has-hover ? Theme.selection-hover : Theme.selection)
+        : touch.has-hover ? Theme.hover : root.quiet ? transparent : Theme.control;
+    animate background { duration: 110ms; easing: ease-out; }
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-enabled: root.enabled;
+    forward-focus: keyboard;
+    Text {
+        text: root.label;
+        font-family: @tr("Microsoft YaHei UI");
+        font-size: root.text-size;
+        font-weight: root.text-weight;
+        color: root.primary ? #18140b : root.danger ? Theme.danger : Theme.text;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    keyboard := FocusScope {
+        focus-on-click: false;
+        enabled: root.enabled;
+        changed has-focus => { if (!self.has-focus) { root.pointer-focus = false; } }
+        key-pressed(event) => {
+            root.pointer-focus = false;
+            if (event.text == Key.Return || event.text == " ") { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(event) => { if (event.kind == PointerEventKind.down) { root.pointer-focus = true; keyboard.focus(); } }
+        clicked => { root.clicked(); }
+    }
+}
+
+export component Field inherits Rectangle {
+    in-out property<string> value;
+    in property<string> placeholder;
+    in property<bool> enabled: true;
+    height: 44px;
+    min-width: 40px;
+    background: Theme.control;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: edit.has-focus ? Theme.accent-line : Theme.input-line;
+    accessible-role: text-input;
+    accessible-label: root.placeholder;
+    forward-focus: edit;
+    Text {
+        x: 12px; width: parent.width - 24px; height: parent.height;
+        text: root.placeholder; color: Theme.faint;
+        vertical-alignment: center;
+        visible: root.value == "";
+    }
+    edit := TextInput {
+        x: 12px; width: parent.width - 24px; height: parent.height;
+        text <=> root.value;
+        enabled: root.enabled;
+        color: Theme.text;
+        font-size: 14px;
+        vertical-alignment: center;
+        single-line: true;
+        selection-background-color: Theme.gold;
+        selection-foreground-color: #17140c;
+    }
+}
+
+export component Toggle inherits Rectangle {
+    in property<bool> checked;
+    in property<string> label;
+    in property<bool> enabled: true;
+    callback toggled();
+    width: 42px; height: 24px;
+    border-radius: 12px;
+    background: root.checked ? Theme.gold : Theme.line;
+    opacity: root.enabled ? 1 : 0.4;
+    animate background { duration: 150ms; }
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-checked: root.checked;
+    accessible-enabled: root.enabled;
+    Rectangle {
+        x: root.checked ? 21px : 3px;
+        y: 3px; width: 18px; height: 18px;
+        border-radius: 9px;
+        background: root.checked ? #19150c : #beb9b0;
+        animate x { duration: 150ms; easing: ease-out; }
+    }
+    forward-focus: keyboard;
+    keyboard := FocusScope { focus-on-click: false; key-pressed(event) => { if (root.enabled && (event.text == " " || event.text == Key.Return)) { root.toggled(); return accept; } return reject; } }
+    TouchArea { enabled: root.enabled; mouse-cursor: pointer;
+        pointer-event(event) => { if (event.kind == PointerEventKind.down) { keyboard.focus(); } }
+        clicked => { root.toggled(); } }
+}
+
+export component SelectBox inherits Rectangle {
+    in property<[string]> choices;
+    in-out property<int> selected;
+    in property<bool> enabled: true;
+    in property<bool> previewable: false;
+    in property<[bool]> sound-available;
+    in property<int> playing-index: -1;
+    callback changed(int);
+    callback preview(int);
+    // Commit while the owning control is alive. Closing the popup first destroys
+    // the intermediate component referenced by its repeater's weak parent link.
+    function choose-option(index: int) {
+        if (index >= 0 && index < root.choices.length) {
+            root.selected = index;
+            root.changed(index);
+        }
+        menu.close();
+    }
+    height: 44px; min-width: 100px;
+    background: touch.has-hover ? Theme.panel : Theme.control;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: keyboard.has-focus ? Theme.accent-line : Theme.input-line;
+    opacity: root.enabled ? 1 : 0.45;
+    Text { x: 12px; width: parent.width - 44px; height: parent.height;
+        text: root.selected >= 0 && root.selected < root.choices.length ? root.choices[root.selected] : @tr("请选择");
+        color: Theme.text; font-size: 13px; vertical-alignment: center; overflow: elide;
+    }
+    Text { x: parent.width - 31px; width: 22px; height: parent.height; text: "\u{E70D}";
+        font-family: "Segoe MDL2 Assets"; font-size: 10px; color: Theme.muted; vertical-alignment: center; }
+    forward-focus: keyboard;
+    touch := TouchArea { enabled: root.enabled; mouse-cursor: pointer;
+        pointer-event(event) => { if (event.kind == PointerEventKind.down) { keyboard.focus(); } }
+        clicked => { menu.show(); } }
+    keyboard := FocusScope { enabled: root.enabled; focus-on-click: false; key-pressed(event) => {
+        if (event.text == " " || event.text == Key.Return) { menu.show(); return accept; }
+        if (event.text == Key.UpArrow || event.text == Key.DownArrow) {
+            if (root.choices.length > 0) {
+                root.choose-option(Math.mod(root.selected + (event.text == Key.DownArrow ? 1 : -1) + root.choices.length, root.choices.length));
+            }
+            return accept;
+        } return reject; } }
+    menu := PopupWindow {
+        close-policy: close-on-click-outside;
+        x: 0px; y: root.height + 5px;
+        width: root.width;
+        height: min(360px, root.choices.length * 44px + 12px);
+        Rectangle {
+            background: Theme.card; border-radius: 12px; border-width: 0.8px; border-color: Theme.input-line;
+            ScrollView {
+                x: 5px; y: 5px; width: parent.width - 10px; height: parent.height - 10px;
+                horizontal-scrollbar-policy: always-off;
+                mouse-drag-pan-enabled: false;
+                content-width: self.width;
+                VerticalLayout {
+                    spacing: 2px;
+                    padding-right: root.choices.length > 8 ? 14px : 0px;
+                    for item[index] in root.choices: Rectangle {
+                        height: 42px; border-radius: 9px;
+                        property<bool> hovered: choose.has-hover || listen.hovered;
+                        background: self.hovered ? Theme.selection-hover : index == root.selected ? Theme.selection : transparent;
+                        animate background { duration: 140ms; easing: ease-out; }
+                        Rectangle { x: 3px; y: 13px; width: 2px; height: 16px; border-radius: 1px;
+                            background: Theme.gold; opacity: index == root.selected ? 1 : 0; animate opacity { duration: 120ms; } }
+                        Text { x: parent.hovered ? 15px : 12px; y: 0px;
+                            width: parent.width - (root.previewable ? 82px : 25px); height: parent.height;
+                            text: item; color: Theme.text; vertical-alignment: center; overflow: elide; font-size: 13px;
+                            animate x { duration: 110ms; easing: ease-out; } }
+                        forward-focus: choice-focus;
+                        choice-focus := FocusScope { focus-on-click: false; key-pressed(event) => {
+                            if (event.text == Key.Return || event.text == " ") {
+                                root.choose-option(index); return accept;
+                            } return reject; } }
+                        choose := TouchArea {
+                            width: parent.width - (root.previewable ? 70px : 0px); mouse-cursor: pointer;
+                            pointer-event(event) => { if (event.kind == PointerEventKind.down) { choice-focus.focus(); } }
+                            clicked => { root.choose-option(index); }
+                        }
+                        listen := ActionButton {
+                            x: parent.width - 64px; y: 6px; width: 58px; height: 30px;
+                            visible: root.previewable;
+                            enabled: index > 0 && index < root.sound-available.length && root.sound-available[index];
+                            label: root.playing-index == index ? @tr("停止") : @tr("试听");
+                            text-size: 11px; selected: root.playing-index == index;
+                            clicked => { root.preview(index); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component Wheel inherits Rectangle {
+    in-out property<int> value;
+    in property<int> limit: 60;
+    in property<string> label;
+    property<length> drag-y;
+    property<int> drag-value;
+    property<bool> dragged;
+    height: 180px; min-width: 68px;
+    background: Theme.panel;
+    border-radius: 12px;
+    clip: true;
+    accessible-role: slider;
+    accessible-label: root.label;
+    forward-focus: keyboard;
+    Rectangle { x: 3px; y: 72px; width: parent.width - 6px; height: 36px; border-radius: 8px; background: Theme.selection; }
+    for row in 5: Text {
+        property<int> number: Math.mod(root.value + row - 2 + root.limit * 4, root.limit);
+        x: 0px; y: row * 36px; width: parent.width; height: 36px;
+        text: self.number < 10 ? "0\{self.number}" : "\{self.number}";
+        color: row == 2 ? Theme.accent-text : row == 1 || row == 3 ? Theme.muted : Theme.faint;
+        font-family: "Bahnschrift";
+        font-size: row == 2 ? 28px : 22px;
+        font-weight: row == 2 ? 600 : 400;
+        horizontal-alignment: center; vertical-alignment: center;
+    }
+    keyboard := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.UpArrow) { root.value = Math.mod(root.value - 1 + root.limit, root.limit); return accept; }
+            if (event.text == Key.DownArrow) { root.value = Math.mod(root.value + 1, root.limit); return accept; }
+            return reject;
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: ns-resize;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) { root.drag-y = self.mouse-y; root.drag-value = root.value; root.dragged = false; keyboard.focus(); }
+        }
+        moved => {
+            if (self.pressed && Math.abs(self.mouse-y - root.drag-y) > 4px) {
+                root.dragged = true;
+                root.value = Math.mod(root.drag-value - Math.round((self.mouse-y - root.drag-y) / 36px) + root.limit * 100, root.limit);
+            }
+        }
+        clicked => { if (!root.dragged) { root.value = Math.mod(root.value + Math.floor(self.mouse-y / 36px) - 2 + root.limit * 4, root.limit); } }
+        scroll-event(event) => {
+            if (event.delta-y != 0px) { root.value = Math.mod(root.value + (event.delta-y < 0px ? 1 : -1) + root.limit, root.limit); }
+            return accept;
+        }
+    }
+}
+
+export component TimePicker inherits Rectangle {
+    in-out property<int> hour;
+    in-out property<int> minute;
+    in-out property<int> second;
+    in property<int> hour-limit: 24;
+    in property<bool> with-seconds: false;
+    in property<bool> large: false;
+    property<int> draft-hour;
+    property<int> draft-minute;
+    property<int> draft-second;
+    callback changed();
+    function open-picker() {
+        root.draft-hour = root.hour;
+        root.draft-minute = root.minute;
+        root.draft-second = root.second;
+        picker.show();
+    }
+    function accept-time() {
+        root.hour = root.draft-hour;
+        root.minute = root.draft-minute;
+        root.second = root.draft-second;
+        root.changed();
+        picker.close();
+    }
+    height: root.large ? 88px : 44px;
+    background: root.large ? transparent : Theme.control;
+    border-radius: 10px;
+    border-width: root.large ? 0px : 1px;
+    border-color: touch.has-hover ? Theme.accent-line : Theme.input-line;
+    property<string> hour-text: root.hour < 10 ? "0\{root.hour}" : "\{root.hour}";
+    property<string> minute-text: root.minute < 10 ? "0\{root.minute}" : "\{root.minute}";
+    property<string> second-text: root.second < 10 ? "0\{root.second}" : "\{root.second}";
+    Text {
+        text: root.with-seconds ? root.hour-text + ":" + root.minute-text + ":" + root.second-text : root.hour-text + ":" + root.minute-text;
+        color: Theme.text;
+        font-family: "Bahnschrift";
+        font-weight: 300;
+        font-size: root.large ? (root.with-seconds ? 58px : 68px) : 20px;
+        letter-spacing: root.large ? 1px : 0px;
+        horizontal-alignment: center; vertical-alignment: center;
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(event) => { if (event.kind == PointerEventKind.down) { keyboard.focus(); } }
+        clicked => { root.open-picker(); }
+    }
+    forward-focus: keyboard;
+    keyboard := FocusScope { focus-on-click: false; key-pressed(event) => { if (event.text == Key.Return || event.text == " ") { root.open-picker(); return accept; } return reject; } }
+    picker := PopupWindow {
+        close-policy: close-on-click-outside;
+        x: (root.width - 300px) / 2;
+        y: root.height + 4px;
+        width: 300px; height: 304px;
+        Rectangle {
+            background: Theme.card; border-radius: 16px; border-width: 0.8px; border-color: Theme.accent-line;
+            VerticalLayout {
+                padding: 16px; spacing: 12px;
+                Text { text: @tr("滑动选择时间"); color: Theme.muted; font-size: 12px; height: 18px; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Wheel { value <=> root.draft-hour; limit: root.hour-limit; label: @tr("小时"); }
+                    Wheel { value <=> root.draft-minute; label: @tr("分钟"); }
+                    if root.with-seconds: Wheel { value <=> root.draft-second; label: @tr("秒"); }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    ActionButton { label: @tr("取消"); clicked => { picker.close(); } }
+                    ActionButton { label: @tr("确定"); primary: true; clicked => { root.accept-time(); } }
+                }
+            }
+        }
+    }
+}
+
+export component SectionTitle inherits Text {
+    color: Theme.text; font-size: 15px; font-weight: 600;
+    height: 26px; vertical-alignment: center;
+}
+
+export component Panel inherits Rectangle {
+    background: Theme.card;
+    border-color: Theme.line; border-width: 0.8px; border-radius: 18px;
+}
+
