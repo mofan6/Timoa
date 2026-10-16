@@ -1,4 +1,4 @@
-Timoa 1.0.1 / 2026-10-15
+Timoa 1.1.0 / 2026-10-16
 
 应用源码：Apache License 2.0（见 LICENSE）
 界面设计署名：Designed By MOTAN
@@ -7,7 +7,7 @@ Timoa 1.0.1 / 2026-10-15
 Acknowledgements: @malinfossum and Tidsro for the initial inspiration and built-in chimes.
 https://github.com/malinfossum/tidsro
 
-功能包括计时器、闹钟、每周计划、数据迁移、音频导入与 Windows 托盘。
+功能包括倒计时、正计时、精简悬浮窗、闹钟、每周计划、数据迁移、音频导入与 Windows 托盘。
 应用调用的系统字体属于 Windows，不随软件重新分发。
 
 Slint 1.18.1：采用 Slint Royalty-free Desktop, Mobile, and Web Applications
@@ -28,5 +28,6 @@ FFmpeg：应用内包含可替换的音频解码组件，采用 LGPL 2.1 或更�
 UPX：https://github.com/upx/upx/releases/tag/v5.1.0
 许可见 licenses/UPX-License.txt 与 UPX-GPL-2.0.txt。
 
-安装程序使用官方 NSIS 3.11 / Modern UI 2 和 zlib 压缩，许可见 licenses/NSIS.txt。
+安装程序使用 NSIS / Modern UI 2 和 zlib 压缩，许可见 licenses/NSIS.txt。
+本版打包器为 w64devkit 2.10.1 随附的 NSIS，版本标识 11-Oct-2026.cvs。
 沿用素材的 Apache 版权声明见 licenses/Apache-2.0.txt。

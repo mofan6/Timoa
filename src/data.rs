@@ -16,10 +16,16 @@ pub struct Settings {
     pub language: i32,
     pub theme: i32,
     pub custom_sounds: Vec<CustomSound>,
+    pub single_focus: bool,
+    pub stopwatch_enabled: bool,
+    pub focus_timer_id: String,
+    pub focus_duration_seconds: u64,
+    pub active_focus_mode: i32,
 }
 impl Default for Settings {
     fn default() -> Self { Self { default_sound: 0, custom_name: String::new(), startup: false,
-        width: 480., height: 760., selected_tab: 0, language: 0, theme: 0, custom_sounds: vec![] } }
+        width: 480., height: 760., selected_tab: 0, language: 0, theme: 0, custom_sounds: vec![],
+        single_focus: false, stopwatch_enabled: false, focus_timer_id: String::new(), focus_duration_seconds: 1500, active_focus_mode: 0 } }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -53,6 +59,13 @@ pub struct Countdown {
     pub sound: i32,
 }
 
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Stopwatch {
+    pub elapsed_ms: u64,
+    pub running: bool,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Document {
@@ -62,10 +75,11 @@ pub struct Document {
     pub countdowns: Vec<Countdown>,
     pub total_focus_ms: u64,
     pub focus_stats_initialized: bool,
+    pub stopwatch: Stopwatch,
 }
 impl Default for Document {
     fn default() -> Self { Self { format: "TIMO.Native.v1".into(), settings: Settings::default(),
-        alarms: vec![], countdowns: vec![], total_focus_ms: 0, focus_stats_initialized: false } }
+        alarms: vec![], countdowns: vec![], total_focus_ms: 0, focus_stats_initialized: false, stopwatch: Stopwatch::default() } }
 }
 
 #[derive(Clone)]
@@ -134,7 +148,12 @@ pub fn sanitize(mut doc: Document) -> Document {
     if !doc.settings.height.is_finite() { doc.settings.height = 760.; }
     doc.settings.width = doc.settings.width.clamp(420., 1600.);
     doc.settings.height = doc.settings.height.clamp(620., 1800.);
-    doc.settings.selected_tab = doc.settings.selected_tab.clamp(0, 3);
+    doc.settings.selected_tab = doc.settings.selected_tab.clamp(0, 4);
+    if doc.settings.selected_tab == 4 && !doc.settings.stopwatch_enabled { doc.settings.selected_tab = 0; }
+    doc.settings.focus_duration_seconds = doc.settings.focus_duration_seconds.clamp(1, 359999);
+    doc.settings.active_focus_mode = if doc.settings.stopwatch_enabled { doc.settings.active_focus_mode.clamp(0, 1) } else { 0 };
+    doc.settings.focus_timer_id = text(&doc.settings.focus_timer_id);
+    doc.stopwatch.elapsed_ms = doc.stopwatch.elapsed_ms.min(359_999_000);
     doc.settings.theme = doc.settings.theme.clamp(0, 1);
     doc.settings.language = doc.settings.language.clamp(0, 2);
     let mut sound_ids = std::collections::HashSet::new();
@@ -158,6 +177,7 @@ pub fn sanitize(mut doc: Document) -> Document {
         if t.id.is_empty() { t.id = new_id(); }
         t.label = text(&t.label); t.sound = sound(t.sound); t.remaining_ms = t.remaining_ms.min(t.original_ms);
     }
+    if !doc.countdowns.iter().any(|timer| timer.id == doc.settings.focus_timer_id) { doc.settings.focus_timer_id.clear(); }
     doc
 }
 

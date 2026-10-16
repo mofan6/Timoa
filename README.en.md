@@ -9,10 +9,13 @@
 
 **Windows 10 / 11, x64.** No separate .NET, VC++, Java or WebView2 runtime installation is required.
 
-- [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.0.1/Timoa.exe): portable single EXE, **8.49 MiB**.
-- [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.0.1/Timoa-Setup.exe): per-user installer, **8.65 MiB**.
-- [Complete source archive](https://github.com/mofan6/Timoa/releases/download/v1.0.1/Timoa-1.0.1-source.zip), including third-party notices and the corresponding source for the audio decoder.
-- [V1.0.1 release notes](https://github.com/mofan6/Timoa/releases/tag/v1.0.1).
+This source is version **1.1.0**. See [release notes](RELEASE-NOTES.md).
+
+- [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa.exe): portable single EXE, **8.63 MiB**.
+- [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa-Setup.exe): per-user installer, **8.92 MiB**.
+- [Complete source archive](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa-1.1.0-source.zip), including third-party notices and the corresponding source for the audio decoder.
+
+Publicly released versions are available from [GitHub Releases](https://github.com/mofan6/Timoa/releases).
 
 Keep the portable EXE in a permanent location before enabling startup at sign-in. Re-enable startup if you move it.
 
@@ -20,6 +23,8 @@ Keep the portable EXE in a permanent location before enabling startup at sign-in
 
 - Multiple countdowns with pause, resume and restart; 5, 10, 25, 45 and 60-minute presets and custom durations down to seconds.
 - Phone-style time wheels controlled with the mouse wheel, dragging or arrow keys.
+- Optional Single focus and Stopwatch modes, both off by default. Starting or resuming either stopwatch or countdown pauses the other and preserves progress.
+- A resizable, always-on-top mini window showing the active timer and alarms due within 30 minutes.
 - One-time and recurring alarms, weekday/weekend/custom schedules, end times and optional five-minute warnings.
 - Six built-in chimes and multiple custom sounds with individual preview and removal. Import common unencrypted MP3, FLAC, M4A, OGG, WAV and other audio files with offline conversion.
 - Total completed focus time that remains counted after completed records are removed.

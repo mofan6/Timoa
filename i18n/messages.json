@@ -850,5 +850,85 @@
   "无法更新 Windows 的启动许可，请在任务管理器中启用 Timoa。": [
     "無法更新 Windows 的啟動許可，請在工作管理員中啟用 Timoa。",
     "Unable to update Windows startup approval. Enable Timoa in Task Manager."
+  ],
+  "更多设置": [
+    "更多設定",
+    "More settings"
+  ],
+  "上一周": [
+    "上一週",
+    "Previous week"
+  ],
+  "下一周": [
+    "下一週",
+    "Next week"
+  ],
+  "单一专注": [
+    "單一專注",
+    "Single focus"
+  ],
+  "正计时": [
+    "正計時",
+    "Stopwatch"
+  ],
+  "停止试听": [
+    "停止試聽",
+    "Stop preview"
+  ],
+  "开启后，首页的大数字会直接倒计时，并提供暂停、重置和移除按钮；下方“我的计时”列表会隐藏。": [
+    "開啟後，首頁的大數字會直接倒數計時，並提供暫停、重設和移除按鈕；下方「我的計時」清單會隱藏。",
+    "Count down directly in the large timer on the home page, with Pause, Reset and Remove controls. The My timers list below will be hidden."
+  ],
+  "将设置和倒计时合并到上方专注卡片，隐藏“我的计时”。已有的其他计时仍会正常提醒。": [
+    "將設定和倒數計時合併到上方專注卡片，隱藏「我的計時」。既有的其他計時仍會正常提醒。",
+    "Combine setup and countdown in the focus card and hide My timers. Other existing timers will still notify you."
+  ],
+  "开启后，在顶部导航中显示正计时。": [
+    "開啟後，在頂部導覽中顯示正計時。",
+    "Show Stopwatch in the top navigation."
+  ],
+  "精简模式": [
+    "精簡模式",
+    "Mini mode"
+  ],
+  "返回完整窗口": [
+    "返回完整視窗",
+    "Open full window"
+  ],
+  "最小化": [
+    "最小化",
+    "Minimize"
+  ],
+  "还原窗口": [
+    "還原視窗",
+    "Restore window"
+  ],
+  "最大化": [
+    "最大化",
+    "Maximize"
+  ],
+  "开始正计时": [
+    "開始正計時",
+    "Start"
+  ],
+  "完成本轮": [
+    "完成本輪",
+    "Finish"
+  ],
+  "从零开始，记录这一段专注。": [
+    "從零開始，記錄這一段專注。",
+    "Start from zero and make time for focus."
+  ],
+  "完成本轮后计入总专注时长；重置不计入。退出软件后保留时长，下次打开时暂停。": [
+    "完成本輪後計入總專注時長；重置不計入。退出軟體後保留時長，下次開啟時暫停。",
+    "Finish to add this session to total focus time. Reset discards it. Elapsed time is kept when you exit and restored paused."
+  ],
+  "尚未开始": [
+    "尚未開始",
+    "Not started"
+  ],
+  " · 共 {} 项提醒": [
+    " · 共 {} 項提醒",
+    " · {} reminders in total"
   ]
 }

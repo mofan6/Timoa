@@ -1,7 +1,7 @@
 {
   "name": "Timoa",
-  "version": "1.0.1",
-  "date": "2026-10-15",
+  "version": "1.1.0",
+  "date": "2026-10-16",
   "platform": "Windows 10/11 x64",
   "runtime": "Rust 1.99.0, statically linked Windows GNU CRT",
   "ui": "Slint 1.18.1, winit/FemtoVG with software fallback",
@@ -11,27 +11,31 @@
     "English"
   ],
   "defaultLanguage": "简体中文",
+  "defaultFeatures": {
+    "singleFocus": false,
+    "stopwatch": false
+  },
   "artifacts": [
     {
-      "file": "Timoa-Setup.exe",
-      "sha256": "9C870A259FD76934F37FD88D6EC9029E5F997919F0B66FFF49DE1763006C0E32",
-      "bytes": 9071201
+      "file": "Timoa.exe",
+      "bytes": 9051648,
+      "sha256": "4FE59A4D37F31D802A4623CC7A66D795E8DA6DF9D43DC6D25E5B690E3E47F180"
     },
     {
-      "file": "Timoa.exe",
-      "sha256": "A96F361C594EC0D187661A61EF2EEA5D9BFAEEBF91ADAD52E628E8424424BA4C",
-      "bytes": 8900096
+      "file": "Timoa-Setup.exe",
+      "bytes": 9356337,
+      "sha256": "B10451F1E8623E3CB54CA9610F260E4A02F7EC0A5E00D1838E3385B92822EFB5"
     }
   ],
   "review": [
-    "Backup import/export and Windows startup reviewed in source code; corrective changes documented in docs/代码审查.md",
-    "Release EXE and NSIS installer compiled successfully",
-    "Source files included in the delivery archive"
+    "13 windowless engine logic checks passed.",
+    "UI translations, native resize handling and theme bindings reviewed in source.",
+    "Final interface changes reviewed and approved by the user before packaging."
   ],
-  "interactionTests": "No actual backup restore, startup registry change, installation, uninstallation or Windows restart verification performed, as requested.",
-  "stage": "Released",
+  "interactionTests": "No automated window, installation, uninstallation or Windows startup verification performed.",
+  "stage": "Release v1.1.0",
   "packer": "Official UPX 5.1.0, icons and relocations preserved",
-  "installer": "NSIS 3.11, Modern UI 2, zlib",
+  "installer": "NSIS 11-Oct-2026.cvs bundled with w64devkit 2.10.1; Modern UI 2, zlib",
   "repository": "https://github.com/mofan6/Timoa",
-  "release": "https://github.com/mofan6/Timoa/releases/tag/v1.0.1"
+  "release": "https://github.com/mofan6/Timoa/releases/tag/v1.1.0"
 }

@@ -2,7 +2,7 @@
 use std::{ffi::OsStr, os::windows::ffi::OsStrExt, path::Path, sync::{OnceLock, mpsc::Sender}};
 use crate::i18n;
 use windows_sys::Win32::{Foundation::*, System::{LibraryLoader::GetModuleHandleW, Threading::*, Registry::*},
-    UI::{WindowsAndMessaging::*, Shell::*, Input::KeyboardAndMouse::*}, Graphics::Dwm::*};
+    UI::{WindowsAndMessaging::*, Shell::*, Input::KeyboardAndMouse::*, HiDpi::*, Controls::MARGINS}, Graphics::{Dwm::*, Gdi::*}};
 
 pub enum Event { Show, Quit }
 static EVENTS: OnceLock<Sender<Event>> = OnceLock::new();
@@ -133,7 +133,9 @@ pub fn hwnd(window: &slint::Window) -> Option<HWND> {
 pub fn theme_frame(window: &slint::Window, owner: Option<HWND>, is_dark: bool) {
     let Some(hwnd) = hwnd(window) else { return; };
     unsafe {
-        let dark: i32 = is_dark as i32; let color: u32 = if is_dark { 0x000a0a0a } else { 0x00f0f4f5 }; let border: u32 = if is_dark { 0x002b2b2b } else { 0x00d0d9dd };
+        let dark: i32 = is_dark as i32; let color: u32 = if is_dark { 0x000a0a0a } else { 0x00f0f4f5 };
+        let mini = !GetPropW(hwnd, wide(MINI_FRAME).as_ptr()).is_null();
+        let border: u32 = if is_dark { if mini { 0x00343434 } else { 0x002b2b2b } } else { 0x00d0d9dd };
         let text: u32 = if is_dark { 0x00ecf1f4 } else { 0x001e2529 }; let corner: i32 = 2;
         DwmSetWindowAttribute(hwnd, 20, (&dark as *const i32).cast(), 4);
         DwmSetWindowAttribute(hwnd, 36, (&text as *const u32).cast(), 4);
@@ -146,6 +148,108 @@ pub fn theme_frame(window: &slint::Window, owner: Option<HWND>, is_dark: bool) {
 pub fn show(window: &slint::Window) {
     let _ = window.show();
     if let Some(hwnd) = hwnd(window) { unsafe { ShowWindow(hwnd, SW_RESTORE); SetForegroundWindow(hwnd); } }
+}
+
+const FRAME_PROC: &str = "Timoa.OriginalWindowProc";
+const MINI_FRAME: &str = "Timoa.MiniWindow";
+
+// Keep a native resizable frame and DWM shadow/corners, while the client draws
+// the caption. Each window stores its own previous procedure in a Win32 property.
+pub fn configure_chrome(window: &slint::Window, mini: bool) {
+    let Some(hwnd) = hwnd(window) else { return; };
+    unsafe {
+        if !GetPropW(hwnd, wide(FRAME_PROC).as_ptr()).is_null() { return; }
+        let original = GetWindowLongPtrW(hwnd, GWLP_WNDPROC);
+        if original == 0 || SetPropW(hwnd, wide(FRAME_PROC).as_ptr(), original as HANDLE) == 0 { return; }
+        if mini { SetPropW(hwnd, wide(MINI_FRAME).as_ptr(), 1usize as HANDLE); }
+        SetWindowLongPtrW(hwnd, GWLP_WNDPROC, frame_proc as *const () as isize);
+        let mut style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32 | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU;
+        if mini {
+            style &= !(WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+            let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ((ex_style | WS_EX_TOOLWINDOW) & !WS_EX_APPWINDOW) as isize);
+        } else { style |= WS_MINIMIZEBOX | WS_MAXIMIZEBOX; }
+        SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
+        let margins = MARGINS { cxLeftWidth: 1, cxRightWidth: 1, cyTopHeight: 1, cyBottomHeight: 1 };
+        DwmExtendFrameIntoClientArea(hwnd, &margins);
+        SetWindowPos(hwnd, std::ptr::null_mut(), 0, 0, 0, 0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+}
+
+unsafe extern "system" fn frame_proc(hwnd: HWND, message: u32, w: WPARAM, l: LPARAM) -> LRESULT {
+    unsafe {
+        let original = GetPropW(hwnd, wide(FRAME_PROC).as_ptr());
+        if original.is_null() { return DefWindowProcW(hwnd, message, w, l); }
+        let original: unsafe extern "system" fn(HWND, u32, WPARAM, LPARAM) -> LRESULT = std::mem::transmute(original);
+        if message == WM_NCCALCSIZE && w != 0 {
+            if IsZoomed(hwnd) != 0 {
+                let mut info: MONITORINFO = std::mem::zeroed(); info.cbSize = std::mem::size_of_val(&info) as u32;
+                if GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &mut info) != 0 {
+                    (*(l as *mut NCCALCSIZE_PARAMS)).rgrc[0] = info.rcWork;
+                }
+            }
+            return 0;
+        }
+        // Both windows retain native edge/corner resize handling. Keeping this
+        // in non-client hit testing avoids Slint pointer capture during resizing.
+        if message == WM_NCHITTEST && IsZoomed(hwnd) == 0 {
+            let mut rect: RECT = std::mem::zeroed(); GetWindowRect(hwnd, &mut rect);
+            let x = (l as u32 & 0xffff) as i16 as i32;
+            let y = ((l as u32 >> 16) & 0xffff) as i16 as i32;
+            let dpi = GetDpiForWindow(hwnd).max(96);
+            let border = GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+            let left = x < rect.left + border; let right = x >= rect.right - border;
+            let top = y < rect.top + border; let bottom = y >= rect.bottom - border;
+            let hit = match (left, right, top, bottom) {
+                (true, _, true, _) => HTTOPLEFT, (_, true, true, _) => HTTOPRIGHT,
+                (true, _, _, true) => HTBOTTOMLEFT, (_, true, _, true) => HTBOTTOMRIGHT,
+                (true, _, _, _) => HTLEFT, (_, true, _, _) => HTRIGHT,
+                (_, _, true, _) => HTTOP, (_, _, _, true) => HTBOTTOM, _ => HTCLIENT,
+            };
+            if hit != HTCLIENT { return hit as LRESULT; }
+        }
+        if message == WM_NCHITTEST { return HTCLIENT as LRESULT; }
+        if message == WM_NCDESTROY {
+            RemovePropW(hwnd, wide(FRAME_PROC).as_ptr()); RemovePropW(hwnd, wide(MINI_FRAME).as_ptr());
+        }
+        CallWindowProcW(Some(original), hwnd, message, w, l)
+    }
+}
+
+pub fn caption_action(window: &slint::Window, action: &str) {
+    let Some(hwnd) = hwnd(window) else { return; };
+    unsafe {
+        match action {
+            "minimize" => { ShowWindow(hwnd, SW_MINIMIZE); }
+            "maximize" => { ShowWindow(hwnd, if IsZoomed(hwnd) != 0 { SW_RESTORE } else { SW_MAXIMIZE }); }
+            _ => {}
+        }
+    }
+}
+pub fn maximized(window: &slint::Window) -> bool { hwnd(window).is_some_and(|hwnd| unsafe { IsZoomed(hwnd) != 0 }) }
+
+pub fn pointer_position(window: &slint::Window) -> Option<slint::LogicalPosition> {
+    let hwnd = hwnd(window)?;
+    unsafe {
+        let mut point: POINT = std::mem::zeroed();
+        if GetCursorPos(&mut point) == 0 || ScreenToClient(hwnd, &mut point) == 0 { return None; }
+        let scale = window.scale_factor().max(0.1);
+        Some(slint::LogicalPosition::new(point.x as f32 / scale, point.y as f32 / scale))
+    }
+}
+
+pub fn place_mini(window: &slint::Window, parent: &slint::Window) {
+    let Some(parent_hwnd) = hwnd(parent) else { return; };
+    unsafe {
+        let mut info: MONITORINFO = std::mem::zeroed(); info.cbSize = std::mem::size_of_val(&info) as u32;
+        if GetMonitorInfoW(MonitorFromWindow(parent_hwnd, MONITOR_DEFAULTTONEAREST), &mut info) == 0 { return; }
+        let scale = window.scale_factor(); let size = window.size(); let pos = parent.position();
+        let x = (pos.x + parent.size().width as i32 - size.width as i32 - (24. * scale) as i32)
+            .clamp(info.rcWork.left, (info.rcWork.right - size.width as i32).max(info.rcWork.left));
+        let y = (pos.y + (64. * scale) as i32).clamp(info.rcWork.top, (info.rcWork.bottom - size.height as i32).max(info.rcWork.top));
+        window.set_position(slint::PhysicalPosition::new(x, y));
+    }
 }
 
 pub fn startup(enabled: bool) -> Result<(), String> {

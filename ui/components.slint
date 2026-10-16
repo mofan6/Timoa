@@ -20,8 +20,14 @@ export global Theme {
     out property<color> accent-line: dark ? #e3b34150 : #b68a2b55;
     out property<color> selection: dark ? #e3b3411e : #e3b34122;
     out property<color> selection-hover: dark ? #e3b34132 : #e3b34138;
-    out property<color> hero: dark ? #1e1c17 : #fffbef;
+    out property<color> hero: dark ? #1e1c17 : card;
     out property<color> danger: dark ? #d9736a : #ba4438;
+}
+
+// Only in-page branding follows the theme. The native window/executable icon
+// continues to use the original asset in both modes.
+export component AppLogo inherits Image {
+    source: Theme.dark ? @image-url("../assets/logo.svg") : @image-url("../assets/logo-light.svg");
 }
 
 export component PageScroll inherits ScrollView {
@@ -34,8 +40,102 @@ export component PageScroll inherits ScrollView {
     }
 }
 
+export component InfoTip inherits Rectangle {
+    callback hint-hover(bool);
+    property<bool> hint-shown: false;
+    // A small mark with a generous hover region; the visual size is independent
+    // from the hit target so the explanation does not require pixel hunting.
+    width: 30px; height: 30px;
+    Rectangle {
+        x: (parent.width - 12px) / 2; y: (parent.height - 12px) / 2;
+        width: 12px; height: 12px; border-radius: 6px; border-width: 0.85px;
+        border-color: hover.has-hover ? Theme.accent-text : Theme.faint;
+        Rectangle { x: 5.4px; y: 2.8px; width: 1.2px; height: 4px; border-radius: 0.6px;
+            background: hover.has-hover ? Theme.accent-text : Theme.faint; }
+        Rectangle { x: 5.4px; y: 8.1px; width: 1.2px; height: 1.2px; border-radius: 0.6px;
+            background: hover.has-hover ? Theme.accent-text : Theme.faint; }
+    }
+    Timer {
+        interval: 100ms;
+        running: hover.has-hover && !root.hint-shown;
+        triggered => { root.hint-shown = true; root.hint-hover(true); }
+    }
+    hover := TouchArea {
+        mouse-cursor: help;
+        changed has-hover => {
+            if (!self.has-hover) { root.hint-shown = false; root.hint-hover(false); }
+        }
+        moved => { if (root.hint-shown) { root.hint-hover(true); } }
+    }
+}
+
+export component CaptionButton inherits Rectangle {
+    in property<string> kind;
+    in property<string> label;
+    callback clicked();
+    width: 46px; height: 32px;
+    background: touch.has-hover ? (root.kind == "close" ? #c42b1c : Theme.hover) : transparent;
+    animate background { duration: 100ms; }
+    accessible-role: button; accessible-label: root.label;
+    Path {
+        x: (root.width - 16px) / 2; y: (root.height - 16px) / 2; width: 16px; height: 16px;
+        viewbox-width: 16; viewbox-height: 16;
+        stroke: root.kind == "close" && touch.has-hover ? #ffffff : Theme.text;
+        stroke-width: 1.1px; fill: transparent;
+        commands: root.kind == "minimize" ? "M 3 8 L 13 8"
+            : root.kind == "maximize" ? "M 3 3 L 13 3 L 13 13 L 3 13 Z"
+            : root.kind == "restore" ? "M 6 3 L 13 3 L 13 10 M 3 6 L 10 6 L 10 13 L 3 13 Z"
+            : root.kind == "compact" ? "M 3 8 L 3 3 L 13 3 L 13 6 M 7 8 L 14 8 L 14 13 L 7 13 Z"
+            : "M 3 3 L 13 13 M 13 3 L 3 13";
+    }
+    touch := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    FocusScope { focus-on-click: false; key-pressed(event) => {
+        if (event.text == Key.Return || event.text == " ") { root.clicked(); return accept; } return reject;
+    } }
+    Tooltip { text: @markdown("\{root.label}"); }
+}
+
+export component PreviewButton inherits Rectangle {
+    in property<bool> playing: false;
+    in property<bool> enabled: true;
+    out property<bool> hovered: touch.has-hover;
+    callback clicked();
+    width: 30px; height: 30px;
+    border-radius: self.width / 2;
+    border-width: 0.8px;
+    border-color: root.playing || touch.has-hover ? Theme.accent-line : Theme.input-line;
+    background: touch.pressed ? Theme.pressed : root.playing ? Theme.selection
+        : touch.has-hover ? Theme.hover : Theme.control;
+    opacity: root.enabled ? 1 : 0.35;
+    animate background { duration: 110ms; easing: ease-out; }
+    accessible-role: button;
+    accessible-label: root.playing ? @tr("停止试听") : @tr("试听");
+    accessible-enabled: root.enabled;
+    forward-focus: keyboard;
+    Path {
+        x: (root.width - 14px) / 2; y: (root.height - 14px) / 2;
+        width: 14px; height: 14px; viewbox-width: 14; viewbox-height: 14;
+        fill: root.playing || touch.has-hover ? Theme.accent-text : Theme.text;
+        commands: root.playing ? "M 3 2 L 6 2 L 6 12 L 3 12 Z M 8 2 L 11 2 L 11 12 L 8 12 Z"
+            : "M 4 2 L 12 7 L 4 12 Z";
+    }
+    keyboard := FocusScope {
+        focus-on-click: false; enabled: root.enabled;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled; mouse-cursor: pointer;
+        pointer-event(event) => { if (event.kind == PointerEventKind.down) { keyboard.focus(); } }
+        clicked => { root.clicked(); }
+    }
+}
+
 export component ActionButton inherits Rectangle {
     in property<string> label;
+    in property<int> chevron: 0;
     in property<bool> primary: false;
     in property<bool> quiet: false;
     in property<bool> danger: false;
@@ -67,6 +167,7 @@ export component ActionButton inherits Rectangle {
     accessible-enabled: root.enabled;
     forward-focus: keyboard;
     Text {
+        visible: root.chevron == 0;
         text: root.label;
         font-family: @tr("Microsoft YaHei UI");
         font-size: root.text-size;
@@ -75,6 +176,13 @@ export component ActionButton inherits Rectangle {
         horizontal-alignment: center;
         vertical-alignment: center;
         overflow: elide;
+    }
+    if root.chevron != 0: Path {
+        x: (root.width - 16px) / 2; y: (root.height - 16px) / 2;
+        width: 16px; height: 16px; viewbox-width: 16; viewbox-height: 16;
+        stroke: Theme.text; stroke-width: 1.6px; fill: transparent;
+        commands: root.chevron < 0 ? "M 10.5 3.5 L 5.5 8 L 10.5 12.5"
+            : "M 5.5 3.5 L 10.5 8 L 5.5 12.5";
     }
     keyboard := FocusScope {
         focus-on-click: false;
@@ -219,7 +327,7 @@ export component SelectBox inherits Rectangle {
                         Rectangle { x: 3px; y: 13px; width: 2px; height: 16px; border-radius: 1px;
                             background: Theme.gold; opacity: index == root.selected ? 1 : 0; animate opacity { duration: 120ms; } }
                         Text { x: parent.hovered ? 15px : 12px; y: 0px;
-                            width: parent.width - (root.previewable ? 82px : 25px); height: parent.height;
+                            width: parent.width - (root.previewable ? 54px : 25px); height: parent.height;
                             text: item; color: Theme.text; vertical-alignment: center; overflow: elide; font-size: 13px;
                             animate x { duration: 110ms; easing: ease-out; } }
                         forward-focus: choice-focus;
@@ -228,16 +336,15 @@ export component SelectBox inherits Rectangle {
                                 root.choose-option(index); return accept;
                             } return reject; } }
                         choose := TouchArea {
-                            width: parent.width - (root.previewable ? 70px : 0px); mouse-cursor: pointer;
+                            width: parent.width - (root.previewable ? 46px : 0px); mouse-cursor: pointer;
                             pointer-event(event) => { if (event.kind == PointerEventKind.down) { choice-focus.focus(); } }
                             clicked => { root.choose-option(index); }
                         }
-                        listen := ActionButton {
-                            x: parent.width - 64px; y: 6px; width: 58px; height: 30px;
+                        listen := PreviewButton {
+                            x: parent.width - 38px; y: 6px;
                             visible: root.previewable;
                             enabled: index > 0 && index < root.sound-available.length && root.sound-available[index];
-                            label: root.playing-index == index ? @tr("停止") : @tr("试听");
-                            text-size: 11px; selected: root.playing-index == index;
+                            playing: root.playing-index == index;
                             clicked => { root.preview(index); }
                         }
                     }

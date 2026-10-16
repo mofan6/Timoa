@@ -38,7 +38,7 @@ fn main() {
         resource.set_icon("assets/timoa.ico");
         resource.set("ProductName", "Timoa");
         resource.set("FileDescription", "Timoa 原生声明式计时与闹钟");
-        resource.set("ProductVersion", "1.0.1");
+        resource.set("ProductVersion", env!("CARGO_PKG_VERSION"));
         resource.set_manifest_file("app.manifest");
         resource.compile().expect("Windows application resources");
     }

@@ -15,7 +15,9 @@ $env:CARGO_ENCODED_RUSTFLAGS = $flags -join [char]31
 & cargo build --release --locked --bin Timoa
 if ($LASTEXITCODE -ne 0) { throw 'Native build failed.' }
 [IO.Directory]::CreateDirectory((Join-Path $PSScriptRoot 'dist')) | Out-Null
-Copy-Item -LiteralPath 'target\release\Timoa.exe' -Destination 'dist\Timoa.exe'
+$targetDirectory = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { 'target' }
+$builtExe = Join-Path $targetDirectory 'release\Timoa.exe'
+Copy-Item -LiteralPath $builtExe -Destination 'dist\Timoa.exe'
 if ($Upx) {
     & $Upx --best --lzma --compress-icons=0 --strip-relocs=0 'dist\Timoa.exe'
     if ($LASTEXITCODE -ne 0) { throw 'Executable compression failed.' }
@@ -29,7 +31,7 @@ if ($Setup) {
     if (!(Test-Path -LiteralPath $NsisCompiler)) { throw 'Pass -NsisCompiler with the path to NSIS 3.11+ makensis.exe.' }
     $exe = Join-Path $PSScriptRoot 'dist\Timoa.exe'
     $output = Join-Path $PSScriptRoot 'dist'
-    & $NsisCompiler /V3 "/DAPP_EXE=$exe" "/DPACKAGE_DIR=$output" 'installer\Timoa.nsi'
+    & $NsisCompiler /V3 /INPUTCHARSET UTF8 /OUTPUTCHARSET UTF8 "/DAPP_EXE=$exe" "/DPACKAGE_DIR=$output" 'installer\Timoa.nsi'
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed.' }
 }
 Get-ChildItem -LiteralPath 'dist' -File | Select-Object Name,Length

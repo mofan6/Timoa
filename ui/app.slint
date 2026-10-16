@@ -1,5 +1,5 @@
 import { ScrollView, AboutSlint } from "std-widgets.slint";
-import { Theme, PageScroll, ActionButton, Field, Toggle, SelectBox, TimePicker, Panel, SectionTitle } from "components.slint";
+import { Theme, AppLogo, PageScroll, ActionButton, PreviewButton, Field, Toggle, SelectBox, TimePicker, Panel, SectionTitle, InfoTip, CaptionButton } from "components.slint";
 
 export { Theme }
 
@@ -92,6 +92,7 @@ component AlarmEditor inherits Rectangle {
 
 export component MainWindow inherits Window {
     title: "Timoa";
+    no-frame: true;
     preferred-width: 480px; preferred-height: 760px;
     min-width: 420px; min-height: 620px;
     background: Theme.bg;
@@ -99,6 +100,29 @@ export component MainWindow inherits Window {
     default-font-size: 14px;
     icon: @image-url("../assets/logo.svg");
     in-out property<int> page: 0;
+    in property<bool> window-maximized;
+    callback caption-action(string);
+    in property<bool> single-focus;
+    in property<bool> stopwatch-enabled;
+    in-out property<bool> more-settings-open;
+    in-out property<bool> hint-visible;
+    in property<length> hint-x;
+    in property<length> hint-y;
+    callback info-hint(bool);
+    callback change-single-focus();
+    callback change-stopwatch-enabled();
+    callback draft-changed();
+    in property<bool> focus-active;
+    in property<string> focus-id;
+    in property<string> focus-time: "00:25:00";
+    in property<string> focus-status;
+    in property<float> focus-progress;
+    in property<bool> focus-paused;
+    in property<bool> focus-finished;
+    in property<string> stopwatch-time: "00:00:00";
+    in property<bool> stopwatch-running;
+    in property<bool> stopwatch-has-time;
+    callback stopwatch-action(string);
     in property<string> clock-text;
     in property<string> date-text;
     in property<string> message;
@@ -111,6 +135,7 @@ export component MainWindow inherits Window {
     in property<[string]> sounds;
     in property<[bool]> sound-available;
     in property<[TimerRow]> timers;
+    property<[TimerRow]> visible-timers: root.single-focus ? [] : root.timers;
     in property<[AlarmRow]> alarms;
     in property<string> next-time: "--:--";
     in property<string> next-label: @tr("添加一个闹钟，安排下一段时间");
@@ -175,10 +200,25 @@ export component MainWindow inherits Window {
     callback open-data();
 
     VerticalLayout {
+      padding: 0px; spacing: 0px;
+      HorizontalLayout {
+        height: 32px; spacing: 0px;
+        Rectangle {
+            AppLogo { x: 12px; y: (parent.height - self.height) / 2; width: 16px; height: 16px; }
+            Text { x: 35px; width: max(0px, parent.width - 43px); height: parent.height;
+                text: "Timoa"; color: Theme.text; font-size: 12px; vertical-alignment: center; }
+            WindowMoveArea { }
+        }
+        CaptionButton { kind: "compact"; label: @tr("精简模式"); clicked => { root.caption-action("compact"); } }
+        CaptionButton { kind: "minimize"; label: @tr("最小化"); clicked => { root.caption-action("minimize"); } }
+        CaptionButton { kind: root.window-maximized ? "restore" : "maximize"; label: root.window-maximized ? @tr("还原窗口") : @tr("最大化"); clicked => { root.caption-action("maximize"); } }
+        CaptionButton { kind: "close"; label: @tr("关闭"); clicked => { root.caption-action("close"); } }
+      }
+      VerticalLayout {
         padding: 24px; padding-right: 4px; padding-bottom: 12px; spacing: 16px;
         HorizontalLayout {
             height: 44px; spacing: 12px; padding-right: 20px;
-            Image { width: 40px; height: 40px; source: @image-url("../assets/logo.svg"); }
+            AppLogo { width: 40px; height: 40px; }
             VerticalLayout {
                 spacing: 2px;
                 Text { text: "Timoa"; color: Theme.text; font-size: 21px; font-weight: 600; height: 26px; }
@@ -197,15 +237,22 @@ export component MainWindow inherits Window {
             border-width: 0.8px; border-color: Theme.line;
             HorizontalLayout {
                 padding: 4px; spacing: 3px;
-                for label[index] in [@tr("倒计时"), @tr("闹钟计划"), @tr("一周"), @tr("设置")]: ActionButton {
-                    label: label; quiet: true; navigation: true; preferred-height: 36px; min-height: 32px;
-                    selected: root.page == index;
-                    clicked => { root.page = index; root.navigate(index); }
-                }
+                ActionButton { label: @tr("倒计时"); quiet: true; navigation: true; preferred-height: 36px; min-height: 32px; text-size: root.stopwatch-enabled ? 12px : 13px;
+                    selected: root.page == 0; clicked => { root.page = 0; root.navigate(0); } }
+                if root.stopwatch-enabled: ActionButton { label: @tr("正计时"); quiet: true; navigation: true; preferred-height: 36px; min-height: 32px; text-size: 12px;
+                    selected: root.page == 4; clicked => { root.page = 4; root.navigate(4); } }
+                ActionButton { label: @tr("闹钟计划"); quiet: true; navigation: true; preferred-height: 36px; min-height: 32px; text-size: root.stopwatch-enabled ? 12px : 13px;
+                    selected: root.page == 1; clicked => { root.page = 1; root.navigate(1); } }
+                ActionButton { label: @tr("一周"); quiet: true; navigation: true; preferred-height: 36px; min-height: 32px; text-size: root.stopwatch-enabled ? 12px : 13px;
+                    selected: root.page == 2; clicked => { root.page = 2; root.navigate(2); } }
+                ActionButton { label: @tr("设置"); quiet: true; navigation: true; preferred-height: 36px; min-height: 32px; text-size: root.stopwatch-enabled ? 12px : 13px;
+                    selected: root.page == 3; clicked => { root.page = 3; root.navigate(3); } }
             }
         }
           }
-        if root.message != "": Rectangle {
+        if root.message != "": HorizontalLayout {
+          padding-right: 20px;
+          Rectangle {
             height: banner-text.preferred-height + 20px;
             background: Theme.selection; border-color: Theme.accent-line; border-width: 0.8px; border-radius: 10px;
             banner-text := Text {
@@ -213,45 +260,68 @@ export component MainWindow inherits Window {
                 text: root.message; wrap: word-wrap; color: Theme.muted; font-size: 12px;
             }
             ActionButton { x: parent.width - 36px; width: 30px; height: parent.height; label: "×"; quiet: true; clicked => { root.clear-message(); } }
+          }
         }
 
         if root.page == 0: PageScroll {
             VerticalLayout {
                 spacing: 18px;
                 Panel {
-                    height: 326px; border-color: Theme.accent-line;
+                    height: root.single-focus && root.focus-active ? 378px : 326px; border-color: Theme.accent-line;
                     background: Theme.hero;
                     VerticalLayout {
                         padding: 20px; spacing: 12px;
                         HorizontalLayout {
                             height: 20px;
                             Text { text: @tr("专注计时"); color: Theme.accent-text; font-size: 12px; font-weight: 600; }
-                            Text { text: @tr("点击数字，滑动设定"); color: Theme.faint; font-size: 11px; horizontal-alignment: right; }
+                            Text { text: root.single-focus && root.focus-active ? root.focus-status : @tr("点击数字，滑动设定"); color: Theme.faint; font-size: 11px; horizontal-alignment: right; }
                         }
-                        TimePicker { height: 82px; large: true; with-seconds: true; hour-limit: 100;
-                            hour <=> root.draft-hour; minute <=> root.draft-minute; second <=> root.draft-second; }
+                        if !root.single-focus || !root.focus-active: TimePicker { height: 82px; large: true; with-seconds: true; hour-limit: 100;
+                            hour <=> root.draft-hour; minute <=> root.draft-minute; second <=> root.draft-second;
+                            changed => { root.draft-changed(); }
+                        }
+                        if root.single-focus && root.focus-active: Text {
+                            text: root.focus-time; height: 82px; color: root.focus-finished ? Theme.accent-text : Theme.text;
+                            font-family: "Bahnschrift"; font-size: 58px; font-weight: 300; letter-spacing: 1px;
+                            horizontal-alignment: center; vertical-alignment: center;
+                        }
+                        if root.single-focus: Rectangle { height: 3px; border-radius: 2px; background: Theme.line;
+                            Rectangle { width: parent.width * (root.focus-active ? root.focus-progress : 0); height: parent.height;
+                                border-radius: 2px; background: Theme.accent-text; animate width { duration: 150ms; } }
+                        }
                         HorizontalLayout {
                             spacing: 6px; height: 32px;
                             for minutes in [5, 10, 25, 45, 60]: ActionButton {
                                 label: @tr("{} 分钟", minutes); quiet: true; preferred-height: 32px; min-height: 28px; text-size: 11px;
                                 selected: root.draft-hour * 60 + root.draft-minute == minutes && root.draft-second == 0;
-                                clicked => { root.draft-hour = Math.floor(minutes / 60); root.draft-minute = Math.mod(minutes, 60); root.draft-second = 0; }
+                                enabled: !root.single-focus || !root.focus-active;
+                                clicked => { root.draft-hour = Math.floor(minutes / 60); root.draft-minute = Math.mod(minutes, 60); root.draft-second = 0; root.draft-changed(); }
                             }
                         }
-                        Field { value <=> root.draft-label; placeholder: @tr("本轮目标，例如：英语阅读 2 篇"); }
+                        Field { value <=> root.draft-label; placeholder: @tr("本轮目标，例如：英语阅读 2 篇"); enabled: !root.single-focus || !root.focus-active; }
                         HorizontalLayout {
                             spacing: 10px; height: 44px;
-                            SelectBox { choices: root.sounds; selected <=> root.draft-sound; previewable: true; sound-available: root.sound-available; playing-index: root.preview-index; preview(index) => { root.preview-sound(index); } }
-                            ActionButton { label: @tr("开始专注"); primary: true; width: 118px; height: 44px; clicked => { root.start-countdown(); } }
+                            SelectBox { choices: root.sounds; selected <=> root.draft-sound; enabled: !root.single-focus || !root.focus-active; previewable: true; sound-available: root.sound-available; playing-index: root.preview-index; preview(index) => { root.preview-sound(index); } }
+                            ActionButton { label: root.single-focus && root.focus-active ? root.focus-status : @tr("开始专注");
+                                primary: !root.single-focus || !root.focus-active; enabled: !root.single-focus || !root.focus-active;
+                                width: 118px; height: 44px; clicked => { root.start-countdown(); } }
+                        }
+                        if root.single-focus && root.focus-active: HorizontalLayout {
+                            height: 34px; spacing: 8px;
+                            ActionButton { label: root.focus-finished ? @tr("再来一轮") : root.focus-paused ? @tr("继续") : @tr("暂停");
+                                primary: root.focus-finished || root.focus-paused; preferred-height: 34px; min-height: 30px;
+                                clicked => { root.timer-action(root.focus-id, root.focus-finished ? "reset" : "toggle"); } }
+                            ActionButton { label: @tr("重置"); quiet: true; preferred-height: 34px; min-height: 30px; clicked => { root.timer-action(root.focus-id, "reset"); } }
+                            ActionButton { label: @tr("移除"); quiet: true; preferred-height: 34px; min-height: 30px; clicked => { root.timer-action(root.focus-id, "remove"); } }
                         }
                     }
                 }
-                HorizontalLayout {
+                if !root.single-focus: HorizontalLayout {
                     height: 26px;
                     SectionTitle { text: @tr("我的计时"); }
                     Text { text: root.timers.length == 0 ? @tr("准备好就开始") : @tr("{} 项", root.timers.length); color: Theme.faint; font-size: 11px; horizontal-alignment: right; vertical-alignment: center; }
                 }
-                if root.timers.length == 0: Rectangle {
+                if !root.single-focus && root.timers.length == 0: Rectangle {
                     height: 116px; background: Theme.panel; border-radius: 16px; border-width: 0.8px; border-color: Theme.line;
                     VerticalLayout {
                         padding: 20px; spacing: 8px; alignment: center;
@@ -259,7 +329,7 @@ export component MainWindow inherits Window {
                         Text { text: @tr("选一个时长，计时从这里开始。"); color: Theme.faint; font-size: 11px; horizontal-alignment: center; }
                     }
                 }
-                for item in root.timers: Panel {
+                for item in root.visible-timers: Panel {
                     height: 152px;
                     border-color: !item.paused && !item.finished ? Theme.accent-line : Theme.line;
                     VerticalLayout {
@@ -284,6 +354,32 @@ export component MainWindow inherits Window {
                         }
                     }
                 }
+            }
+        }
+
+        if root.page == 4 && root.stopwatch-enabled: PageScroll {
+            VerticalLayout { spacing: 18px;
+                Panel {
+                    height: 320px; background: Theme.hero; border-color: Theme.accent-line;
+                    VerticalLayout { padding: 24px; spacing: 18px;
+                        HorizontalLayout { height: 24px;
+                            SectionTitle { text: @tr("正计时"); color: Theme.accent-text; }
+                            Text { text: root.stopwatch-running ? @tr("进行中") : root.stopwatch-has-time ? @tr("已暂停") : @tr("准备好就开始");
+                                color: Theme.faint; font-size: 11px; horizontal-alignment: right; vertical-alignment: center; }
+                        }
+                        Text { text: root.stopwatch-time; font-family: "Bahnschrift"; font-size: 56px; font-weight: 300;
+                            color: Theme.text; height: 100px; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { text: @tr("从零开始，记录这一段专注。"); color: Theme.muted; font-size: 12px; horizontal-alignment: center; height: 24px; }
+                        HorizontalLayout { height: 40px; spacing: 8px;
+                            ActionButton { label: root.stopwatch-running ? @tr("暂停") : root.stopwatch-has-time ? @tr("继续") : @tr("开始正计时"); primary: true;
+                                clicked => { root.stopwatch-action("toggle"); } }
+                            ActionButton { label: @tr("重置"); enabled: root.stopwatch-has-time; clicked => { root.stopwatch-action("reset"); } }
+                            ActionButton { label: @tr("完成本轮"); enabled: root.stopwatch-has-time; clicked => { root.stopwatch-action("finish"); } }
+                        }
+                    }
+                }
+                Text { text: @tr("完成本轮后计入总专注时长；重置不计入。退出软件后保留时长，下次打开时暂停。");
+                    color: Theme.faint; font-size: 11px; wrap: word-wrap; horizontal-alignment: center; }
             }
         }
 
@@ -371,9 +467,9 @@ export component MainWindow inherits Window {
                 spacing: 18px;
                 HorizontalLayout {
                     height: 36px;
-                    ActionButton { label: "‹"; quiet: true; preferred-width: 36px; min-width: 32px; clicked => { root.change-week(-1); } }
-                    Text { text: root.week-title; color: Theme.text; font-size: 15px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
-                    ActionButton { label: "›"; quiet: true; preferred-width: 36px; min-width: 32px; clicked => { root.change-week(1); } }
+                    ActionButton { label: @tr("上一周"); chevron: -1; quiet: true; width: 36px; height: 36px; clicked => { root.change-week(-1); } }
+                    Text { text: root.week-title; height: 36px; color: Theme.text; font-size: 15px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
+                    ActionButton { label: @tr("下一周"); chevron: 1; quiet: true; width: 36px; height: 36px; clicked => { root.change-week(1); } }
                 }
                 HorizontalLayout {
                     spacing: 5px; height: 84px;
@@ -458,7 +554,9 @@ export component MainWindow inherits Window {
                             height: 50px; border-radius: 9px; background: Theme.control;
                             HorizontalLayout { padding: 8px; spacing: 6px;
                                 Text { text: sound.available ? sound.name : sound.name + " · " + @tr("文件缺失"); color: sound.available ? Theme.muted : Theme.faint; font-size: 11px; overflow: elide; vertical-alignment: center; }
-                                ActionButton { label: root.preview-index == sound.menu-index ? @tr("停止") : @tr("试听"); selected: root.preview-index == sound.menu-index; enabled: sound.available; width: 52px; preferred-height: 34px; min-height: 30px; text-size: 11px; clicked => { root.preview-sound(sound.menu-index); } }
+                                VerticalLayout { width: 32px; alignment: center;
+                                    PreviewButton { playing: root.preview-index == sound.menu-index; enabled: sound.available; clicked => { root.preview-sound(sound.menu-index); } }
+                                }
                                 ActionButton { label: @tr("删除"); danger: true; quiet: true; enabled: !root.import-busy; width: 48px; preferred-height: 34px; min-height: 30px; text-size: 11px; clicked => { root.remove-sound(sound.id); } }
                             }
                         }
@@ -479,6 +577,51 @@ export component MainWindow inherits Window {
                             Text { text: @tr("登录 Windows 后，在托盘中等待提醒。"); color: Theme.faint; font-size: 11px; wrap: word-wrap; }
                         }
                         VerticalLayout { width: 42px; alignment: center; Toggle { checked: root.startup-enabled; label: @tr("开机启动"); toggled => { root.change-startup(); } } }
+                    }
+                }
+                Panel {
+                    height: root.more-settings-open ? 210px : 68px;
+                    VerticalLayout { padding: 18px; spacing: 14px;
+                        Rectangle {
+                            height: 32px; border-radius: 8px;
+                            background: transparent;
+                            accessible-role: button; accessible-label: @tr("更多设置");
+                            forward-focus: more-header-keys;
+                            HorizontalLayout { spacing: 8px;
+                                SectionTitle { text: @tr("更多设置"); }
+                                Rectangle { width: 32px;
+                                    Path { x: 8px; y: 8px; width: 16px; height: 16px;
+                                        viewbox-width: 16; viewbox-height: 16;
+                                        stroke: more-header-touch.has-hover ? Theme.text : Theme.muted;
+                                        stroke-width: 1.5px; fill: transparent;
+                                        commands: root.more-settings-open ? "M 4 10 L 8 6 L 12 10" : "M 4 6 L 8 10 L 12 6";
+                                    }
+                                }
+                            }
+                            more-header-keys := FocusScope { focus-on-click: false; key-pressed(event) => {
+                                if (event.text == Key.Return || event.text == " ") { root.hint-visible = false; root.more-settings-open = !root.more-settings-open; return accept; }
+                                return reject;
+                            } }
+                            more-header-touch := TouchArea { mouse-cursor: pointer;
+                                clicked => { root.hint-visible = false; root.more-settings-open = !root.more-settings-open; } }
+                        }
+                        if root.more-settings-open: VerticalLayout { spacing: 14px;
+                            HorizontalLayout { height: 34px; spacing: 8px;
+                                HorizontalLayout { spacing: 8px; alignment: start;
+                                    Text { text: @tr("单一专注"); color: Theme.text; font-size: 13px; vertical-alignment: center; }
+                                    VerticalLayout { width: 30px; alignment: center;
+                                        InfoTip { hint-hover(visible) => { root.info-hint(visible); } }
+                                    }
+                                }
+                                VerticalLayout { width: 42px; alignment: center; Toggle { checked: root.single-focus; label: @tr("单一专注"); toggled => { root.change-single-focus(); } } }
+                            }
+                            Rectangle { height: 1px; background: Theme.line; }
+                            HorizontalLayout { height: 34px; spacing: 8px;
+                                Text { text: @tr("正计时"); color: Theme.text; font-size: 13px; vertical-alignment: center; }
+                                VerticalLayout { width: 42px; alignment: center; Toggle { checked: root.stopwatch-enabled; label: @tr("正计时"); toggled => { root.change-stopwatch-enabled(); } } }
+                            }
+                            Text { text: @tr("开启后，在顶部导航中显示正计时。"); color: Theme.faint; font-size: 10px; wrap: word-wrap; }
+                        }
                     }
                 }
                 Panel {
@@ -509,6 +652,63 @@ export component MainWindow inherits Window {
             }
         }
 
+      }
+    }
+    // A passive overlay avoids popup input capture, and leaves a gap below the cursor.
+    Rectangle {
+        visible: root.hint-visible && root.page == 3 && root.more-settings-open;
+        width: min(300px, root.width - 24px); height: info-text.preferred-height + 24px;
+        x: max(12px, min(root.hint-x - 30px, root.width - self.width - 12px));
+        y: root.hint-y + 28px + self.height <= root.height - 12px
+            ? root.hint-y + 28px : max(12px, root.hint-y - self.height - 24px);
+        background: Theme.elevated; border-radius: 9px; border-width: 0.8px; border-color: Theme.line;
+        info-text := Text { x: 12px; y: 12px; width: parent.width - 24px;
+            text: @tr("开启后，首页的大数字会直接倒计时，并提供暂停、重置和移除按钮；下方“我的计时”列表会隐藏。");
+            color: Theme.text; font-size: 11px; wrap: word-wrap;
+        }
+    }
+}
+
+export component MiniWindow inherits Window {
+    title: "Timoa"; no-frame: true; always-on-top: true;
+    preferred-width: 280px; preferred-height: root.upcoming-count > 0 ? 148px : 116px;
+    min-width: 248px; min-height: root.upcoming-count > 0 ? 148px : 116px;
+    background: Theme.card; default-font-family: @tr("Microsoft YaHei UI");
+    icon: @image-url("../assets/logo.svg");
+    in property<string> focus-time: "00:25:00";
+    in property<string> focus-label;
+    in property<string> focus-status;
+    in property<float> progress;
+    in property<bool> is-stopwatch;
+    in property<int> upcoming-count;
+    in property<string> upcoming-text;
+    callback caption-action(string);
+    // The native DWM frame is the only rounded edge. A second painted radius
+    // creates mismatched dark wedges and jagged double borders at the corners.
+    Rectangle { background: Theme.card;
+        property<length> body-height: root.height - (root.upcoming-count > 0 ? 76px : 44px);
+        property<length> digits-size: min(54px, min(max(28px, self.body-height - 29px), max(28px, (root.width - 84px) / 5.75)));
+        property<length> digits-height: self.digits-size + 7px;
+        property<length> time-y: 30px + max(0px, (self.body-height - self.digits-height - 18px) / 2);
+        WindowMoveArea { }
+        HorizontalLayout { x: parent.width - 80px; y: 4px; width: 64px; height: 28px; spacing: 0px;
+            CaptionButton { kind: "restore"; label: @tr("返回完整窗口"); width: 32px; height: 28px; clicked => { root.caption-action("restore"); } }
+            CaptionButton { kind: "close"; label: @tr("关闭"); width: 32px; height: 28px; clicked => { root.caption-action("close"); } }
+        }
+        AppLogo { x: 16px; y: parent.time-y + (parent.digits-height - 40px) / 2; width: 40px; height: 40px; }
+        Text { x: 16px; y: 12px; width: parent.width - 108px; height: 18px;
+            text: root.focus-label; color: Theme.muted; font-size: 11px; overflow: elide; }
+        Text { x: 68px; y: parent.time-y; width: parent.width - 84px; height: parent.digits-height;
+            text: root.focus-time; color: Theme.text; font-family: "Bahnschrift"; font-size: parent.digits-size; font-weight: 300; }
+        Text { x: 68px; y: parent.time-y + parent.digits-height; width: parent.width - 84px; height: 16px;
+            text: root.focus-status; color: Theme.faint; font-size: 10px; }
+        Rectangle { x: 16px; y: parent.height - (root.upcoming-count > 0 ? 45px : 13px); width: parent.width - 32px; height: 3px;
+            visible: !root.is-stopwatch; border-radius: 2px; background: Theme.line;
+            Rectangle { width: parent.width * root.progress; height: parent.height; border-radius: 2px; background: Theme.accent-text;
+                animate width { duration: 150ms; } }
+        }
+        if root.upcoming-count > 0: Text { x: 16px; y: parent.height - 31px; width: parent.width - 32px; height: 18px;
+            text: root.upcoming-text; color: Theme.accent-text; font-size: 10px; overflow: elide; }
     }
 }
 
@@ -564,7 +764,7 @@ export component AboutWindow inherits Window {
     callback licenses(); callback dismiss-about();
     VerticalLayout { padding: 26px; spacing: 16px;
         Text { text: "Timoa"; color: Theme.accent-text; font-size: 22px; font-weight: 600; height: 32px; }
-        Text { text: "1.0.1  ·  Windows 10 / 11"; color: Theme.muted; font-size: 12px; height: 18px; }
+        Text { text: "1.1.0  ·  Windows 10 / 11"; color: Theme.muted; font-size: 12px; height: 18px; }
         Text { text: @tr("专注计时、闹钟计划与每周安排。"); color: Theme.muted; font-size: 12px; wrap: word-wrap; vertical-stretch: 1; }
         HorizontalLayout { height: 110px; alignment: center;
             AboutSlint { preferred-width: 190px; max-width: 190px; preferred-height: 110px; max-height: 110px; }

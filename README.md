@@ -9,11 +9,15 @@
 
 支持 **Windows 10 / 11，64 位**。无需另装 .NET、VC++、Java 或 WebView2 运行库。
 
+本源码版本为 **1.1.0**；打包文件如下，更新内容见 [版本说明](RELEASE-NOTES.md)。
+
 | 文件 | 用途 | 大小 |
 | --- | --- | --- |
-| [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.0.1/Timoa.exe) | 单文件便携版，下载后直接运行 | 8.49 MiB |
-| [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.0.1/Timoa-Setup.exe) | 安装版，安装到当前用户目录 | 8.65 MiB |
-| [完整源码包](https://github.com/mofan6/Timoa/releases/download/v1.0.1/Timoa-1.0.1-source.zip) | 含第三方许可和音频解码组件对应源码 | [V1.0.1 发布页](https://github.com/mofan6/Timoa/releases/tag/v1.0.1) |
+| [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa.exe) | 单文件便携版，直接运行 | 8.63 MiB |
+| [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa-Setup.exe) | 安装版，安装到当前用户目录 | 8.92 MiB |
+| [完整源码包](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa-1.1.0-source.zip) | 含第三方许可和音频解码组件对应源码 | — |
+
+已公开发布的版本可从 [GitHub Releases](https://github.com/mofan6/Timoa/releases) 下载。
 
 单 EXE 请先放在固定位置，再开启开机启动；移动程序后需要重新开启。
 
@@ -21,6 +25,8 @@
 
 - **刷题限时与专注计时**：5、10、25、45、60 分钟快捷时长，也可自定义到秒；支持多个计时、暂停、继续和重新开始。
 - **手机式时间选择**：点击时间数字，用鼠标滚轮、上下拖动或方向键选择时间。
+- **单一专注与正计时**：在更多设置中按需开启，默认关闭；正计时与倒计时自动互斥并保留进度。
+- **精简悬浮窗**：显示当前计时与未来 30 分钟内的闹钟，支持置顶、拖动和从边缘调整大小。
 - **闹钟与每周计划**：单次、每天、工作日、周末或自定义重复；支持结束时间和提前五分钟提醒。
 - **提示音管理**：内置六段铃声；可导入多段自定义音频，逐个试听、选择和删除。支持 MP3、FLAC、M4A、OGG、WAV 等常见非加密音频格式，离线转换。
 - **总专注时长**：累计已完成的专注计时，删除完成记录后仍保留累计值。
@@ -50,8 +56,8 @@ FFmpeg 音频组件的对应源码与构建说明包含在 [third-party/FFmpeg](
 
 ## 搜索关键词 / Keywords
 
-倒计时、计时器、电脑闹钟、桌面闹钟、专注计时、学习计时、刷题限时、考研、提醒、时间管理、轻量软件；
-Windows countdown timer, desktop alarm clock, focus timer, study timer, exam preparation, productivity, time management, lightweight, portable, multilingual.
+倒计时、正计时、计时器、电脑闹钟、桌面闹钟、专注计时、悬浮计时、学习计时、刷题限时、考研、提醒、时间管理、轻量软件；
+Windows countdown timer, stopwatch, desktop alarm clock, focus timer, floating timer, study timer, exam preparation, productivity, time management, lightweight, portable, multilingual.
 
 ## 致谢 / Acknowledgements
 

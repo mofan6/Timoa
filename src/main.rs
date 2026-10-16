@@ -18,6 +18,9 @@ enum Confirmation { Import(Document), Clear, Reset }
 struct Editor { id: Option<String>, days: u8 }
 struct App {
     ui: slint::Weak<MainWindow>,
+    mini: MiniWindow,
+    compact: bool,
+    mini_positioned: bool,
     engine: Engine,
     folders: Folders,
     player: audio::Player,
@@ -37,6 +40,13 @@ struct App {
     import_notice: String,
     preview_index: i32,
     preview_deadline: Option<Instant>,
+    message_seen: String,
+    message_deadline: Option<Instant>,
+}
+
+fn clock_duration(ms: u64, round_up: bool) -> String {
+    let seconds = if round_up { ms.div_ceil(1000) } else { ms / 1000 };
+    format!("{:02}:{:02}:{:02}", seconds / 3600, seconds / 60 % 60, seconds % 60)
 }
 
 fn sync_model<T: Clone + PartialEq + 'static>(model: &VecModel<T>, rows: Vec<T>) {
@@ -80,14 +90,63 @@ impl App {
     fn apply_theme(&self) {
         let dark = self.engine.doc.settings.theme == 0;
         if let Some(ui) = self.ui.upgrade() {
+            native::configure_chrome(ui.window(), false);
             ui.global::<Theme>().set_dark(dark);
             ui.set_theme_index(self.engine.doc.settings.theme);
             native::theme_frame(ui.window(), None, dark);
             ui.window().request_redraw();
         }
+        self.mini.global::<Theme>().set_dark(dark);
+        native::configure_chrome(self.mini.window(), true);
+        native::theme_frame(self.mini.window(), None, dark);
+        self.mini.window().request_redraw();
         if let Some((ui, _)) = &self.confirm { ui.global::<Theme>().set_dark(dark); native::theme_frame(ui.window(), None, dark); }
         if let Some((ui, _)) = &self.alert { ui.global::<Theme>().set_dark(dark); native::theme_frame(ui.window(), None, dark); }
         if let Some(ui) = &self.about { ui.global::<Theme>().set_dark(dark); native::theme_frame(ui.window(), None, dark); }
+    }
+    fn set_compact(&mut self, compact: bool) {
+        self.commit(); self.compact = compact; self.refresh();
+        if let Some(ui) = self.ui.upgrade() {
+            if compact {
+                native::configure_chrome(self.mini.window(), true);
+                if !self.mini_positioned {
+                    native::place_mini(self.mini.window(), ui.window()); self.mini_positioned = true;
+                }
+                let _ = self.mini.show(); let _ = ui.hide();
+                native::theme_frame(self.mini.window(), None, self.engine.doc.settings.theme == 0);
+            } else {
+                native::show(ui.window()); let _ = self.mini.hide();
+            }
+        }
+    }
+    fn show_current_window(&self) {
+        if self.compact { native::show(self.mini.window()); }
+        else if let Some(ui) = self.ui.upgrade() { native::show(ui.window()); }
+        self.apply_theme();
+    }
+    fn hide_current_window(&mut self) {
+        self.commit();
+        let _ = self.mini.hide();
+        if let Some(ui) = self.ui.upgrade() { let _ = ui.hide(); }
+    }
+    fn select_focus_timer(&mut self) {
+        let timer = self.engine.focus_timer()
+            .or_else(|| self.engine.doc.countdowns.iter().rev().find(|timer| !timer.finished && !timer.paused))
+            .or_else(|| self.engine.doc.countdowns.iter().rev().find(|timer| !timer.finished)).cloned();
+        if let Some(timer) = timer {
+            self.engine.doc.settings.focus_timer_id = timer.id.clone();
+            self.engine.doc.settings.focus_duration_seconds = timer.original_ms / 1000;
+            if let Some(ui) = self.ui.upgrade() {
+                ui.set_draft_label(timer.label.clone().into()); ui.set_draft_sound(self.sound_index(timer.sound));
+            }
+        }
+        self.restore_focus_draft();
+    }
+    fn restore_focus_draft(&self) {
+        if let Some(ui) = self.ui.upgrade() {
+            let seconds = self.engine.doc.settings.focus_duration_seconds;
+            ui.set_draft_hour((seconds / 3600) as i32); ui.set_draft_minute((seconds / 60 % 60) as i32); ui.set_draft_second((seconds % 60) as i32);
+        }
     }
     fn stop_preview(&mut self) {
         if self.preview_index >= 0 { self.player.stop(); }
@@ -113,7 +172,7 @@ impl App {
         if let Some(ui) = self.ui.upgrade() {
             let scale = ui.window().scale_factor();
             let size = ui.window().size();
-            if size.width > 0 && size.height > 0 {
+            if size.width > 0 && size.height > 0 && !native::maximized(ui.window()) {
                 self.engine.doc.settings.width = (size.width as f32 / scale).clamp(420., 1600.);
                 self.engine.doc.settings.height = (size.height as f32 / scale).clamp(620., 1800.);
             }
@@ -147,7 +206,57 @@ impl App {
         ui.set_clock_text(now.format("%H:%M").to_string().into());
         let weekday = i18n::weekday(now.weekday().num_days_from_monday() as usize);
         ui.set_date_text(format!("{} · {}", i18n::date(now.date_naive()), weekday).into());
+        if self.engine.message.is_empty() { self.message_seen.clear(); self.message_deadline = None; }
+        else if self.message_seen != self.engine.message || self.message_deadline.is_none() {
+            self.message_seen = self.engine.message.clone(); self.message_deadline = Some(Instant::now() + Duration::from_secs(10));
+        }
         ui.set_message(i18n::message(&self.engine.message).into());
+        ui.set_window_maximized(native::maximized(ui.window()));
+        ui.set_single_focus(self.engine.doc.settings.single_focus);
+        ui.set_stopwatch_enabled(self.engine.doc.settings.stopwatch_enabled);
+        let stopwatch_ms = self.engine.stopwatch_elapsed();
+        ui.set_stopwatch_time(clock_duration(stopwatch_ms, false).into());
+        ui.set_stopwatch_running(self.engine.doc.stopwatch.running);
+        ui.set_stopwatch_has_time(stopwatch_ms > 0 || self.engine.doc.stopwatch.running);
+        let timer = self.engine.focus_timer();
+        ui.set_focus_active(timer.is_some());
+        if let Some(timer) = timer {
+            let remaining = self.engine.remaining(timer);
+            ui.set_focus_id(timer.id.clone().into()); ui.set_focus_time(clock_duration(remaining, true).into());
+            ui.set_focus_status(i18n::t(if timer.finished { "已完成" } else if timer.paused { "已暂停" } else { "进行中" }).into());
+            ui.set_focus_progress((1. - remaining as f64 / timer.original_ms.max(1) as f64).clamp(0., 1.) as f32);
+            ui.set_focus_paused(timer.paused); ui.set_focus_finished(timer.finished);
+        } else {
+            ui.set_focus_id("".into()); ui.set_focus_progress(0.); ui.set_focus_paused(false); ui.set_focus_finished(false);
+        }
+        let mini_timer = timer.or_else(|| if self.engine.doc.settings.single_focus { None } else {
+            self.engine.doc.countdowns.iter().rev().find(|timer| !timer.finished && !timer.paused)
+                .or_else(|| self.engine.doc.countdowns.iter().rev().find(|timer| !timer.finished))
+        });
+        let mini_stopwatch = self.engine.mini_uses_stopwatch();
+        self.mini.set_is_stopwatch(mini_stopwatch);
+        if mini_stopwatch {
+            self.mini.set_focus_time(clock_duration(stopwatch_ms, false).into());
+            self.mini.set_focus_label(i18n::t("正计时").into());
+            self.mini.set_focus_status(i18n::t(if self.engine.doc.stopwatch.running { "进行中" } else if stopwatch_ms > 0 { "已暂停" } else { "尚未开始" }).into());
+            self.mini.set_progress(0.);
+        } else if let Some(timer) = mini_timer {
+            let remaining = self.engine.remaining(timer);
+            self.mini.set_focus_time(clock_duration(remaining, true).into());
+            self.mini.set_focus_label(if timer.label.is_empty() { i18n::t("专注计时").into() } else { timer.label.clone().into() });
+            self.mini.set_focus_status(i18n::t(if timer.finished { "已完成" } else if timer.paused { "已暂停" } else { "进行中" }).into());
+            self.mini.set_progress((1. - remaining as f64 / timer.original_ms.max(1) as f64).clamp(0., 1.) as f32);
+        } else {
+            self.mini.set_focus_time(clock_duration(self.engine.doc.settings.focus_duration_seconds * 1000, true).into());
+            self.mini.set_focus_label(i18n::t("专注计时").into());
+            self.mini.set_focus_status(i18n::t("尚未开始").into()); self.mini.set_progress(0.);
+        }
+        let upcoming = self.engine.upcoming_alarms(now.timestamp(), 1800);
+        self.mini.set_upcoming_count(upcoming.len() as i32);
+        let mut upcoming_text = upcoming.iter().take(2).map(|alarm| format!("{:02}:{:02}  {}", alarm.hour, alarm.minute,
+            if alarm.label.is_empty() { i18n::t("闹钟提醒") } else { &alarm.label })).collect::<Vec<_>>().join(" · ");
+        if upcoming.len() > 2 { upcoming_text.push_str(&i18n::message(&format!(" · 共 {} 项提醒", upcoming.len()))); }
+        self.mini.set_upcoming_text(upcoming_text.into());
         ui.set_import_notice(i18n::message(&self.import_notice).into());
         ui.set_language_index(self.engine.doc.settings.language);
         ui.set_theme_index(self.engine.doc.settings.theme);
@@ -224,13 +333,13 @@ impl App {
     }
 }
 
-fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&MainWindow>, dark: bool) {
+fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&slint::Window>, dark: bool) {
     let _ = window.show();
-    let owner = parent.and_then(|p| native::hwnd(p.window()));
+    let owner = parent.and_then(native::hwnd);
     if let Some(parent) = parent {
         {
-            let position = parent.window().position();
-            let owner_size = parent.window().size(); let size = window.window().size();
+            let position = parent.position();
+            let owner_size = parent.size(); let size = window.window().size();
             window.window().set_position(slint::PhysicalPosition::new(position.x + (owner_size.width as i32 - size.width as i32) / 2,
                 position.y + (owner_size.height as i32 - size.height as i32) / 2));
         }
@@ -282,7 +391,10 @@ fn present_alert(controller: &Controller) {
         slint::CloseRequestResponse::HideWindow
     });
     let parent = controller.borrow().ui.upgrade();
-    show_owned(&ui, parent.as_ref(), controller.borrow().engine.doc.settings.theme == 0);
+    {
+        let state = controller.borrow();
+        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|p| p.window()) }, state.engine.doc.settings.theme == 0);
+    }
     {
         let mut app = controller.borrow_mut(); let folders = app.folders.clone();
         if let Err(error) = app.player.play(alert.sound, &folders) { app.folders.log(&error); }
@@ -384,6 +496,7 @@ fn confirm(controller: &Controller, action: Confirmation) {
                 }
                 state.stop_preview(); state.close_alert(); state.alerts.clear();
                 state.engine = replacement; imported = true;
+                state.restore_focus_draft();
                 state.relocalize();
                 if let Some(root) = state.ui.upgrade() {
                     root.set_draft_sound(state.sound_index(state.engine.doc.settings.default_sound)); state.refresh_sound_library();
@@ -395,7 +508,7 @@ fn confirm(controller: &Controller, action: Confirmation) {
                 }
             }
             Confirmation::Clear => {
-                let settings = state.engine.doc.settings.clone();
+                let mut settings = state.engine.doc.settings.clone(); settings.focus_timer_id.clear();
                 state.close_alert(); state.alerts.clear();
                 state.engine = Engine::new(Document { settings, total_focus_ms: state.engine.doc.total_focus_ms, focus_stats_initialized: true, ..Document::default() }, i18n::t("已清除全部计划。").into());
             }
@@ -403,7 +516,9 @@ fn confirm(controller: &Controller, action: Confirmation) {
                 if let Err(error) = native::startup(false) { state.engine.message = error; state.refresh(); return; }
                 let custom_name = state.engine.doc.settings.custom_name.clone();
                 let custom_sounds = state.engine.doc.settings.custom_sounds.clone();
+                if state.engine.doc.stopwatch.running { state.engine.stopwatch_action("toggle"); }
                 state.engine.doc.settings = data::Settings { custom_name, custom_sounds, ..data::Settings::default() };
+                state.restore_focus_draft();
                 i18n::select(0); state.apply_theme();
                 if let Some(root) = state.ui.upgrade() { root.set_sounds(state.sounds()); }
                 if let Some(root) = state.ui.upgrade() {
@@ -418,7 +533,7 @@ fn confirm(controller: &Controller, action: Confirmation) {
         if !imported { state.commit(); } state.refresh();
     } });
     controller.borrow_mut().confirm = Some((ui.clone_strong(), action));
-    show_owned(&ui, parent.as_ref(), controller.borrow().engine.doc.settings.theme == 0);
+    show_owned(&ui, parent.as_ref().map(|p| p.window()), controller.borrow().engine.doc.settings.theme == 0);
 }
 
 fn choose_audio(controller: &Controller) {
@@ -446,6 +561,7 @@ fn export_data(controller: &Controller) {
         let result = serde_json::to_vec_pretty(&document).map_err(|e| e.to_string()).and_then(|bytes| data::atomic_write(&path, &bytes));
         let mut app = controller.borrow_mut();
         app.engine.message = match result { Ok(()) => i18n::t("备份已导出。自定义音频需单独保存。").into(), Err(error) => format!("导出失败：{error}") };
+        app.message_deadline = None;
         app.refresh();
     }
 }
@@ -490,7 +606,7 @@ fn about(controller: &Controller) {
         if let Some(parent) = path.parent() { let _ = fs::create_dir_all(parent); }
         if fs::write(&path, text.as_bytes()).is_ok() { native::open(&path); }
     } });
-    controller.borrow_mut().about = Some(ui.clone_strong()); show_owned(&ui, parent.as_ref(), controller.borrow().engine.doc.settings.theme == 0);
+    controller.borrow_mut().about = Some(ui.clone_strong()); show_owned(&ui, parent.as_ref().map(|p| p.window()), controller.borrow().engine.doc.settings.theme == 0);
 }
 
 fn bind(controller: &Controller, ui: &MainWindow) {
@@ -500,10 +616,45 @@ fn bind(controller: &Controller, ui: &MainWindow) {
             ui.$setter(move |$($argument),*| { if let Some($app) = weak.upgrade() $body });
         }};
     }
-    action!(on_navigate, |app, index| { let mut app = app.borrow_mut(); app.engine.doc.settings.selected_tab = index; app.commit(); app.refresh(); });
+    action!(on_navigate, |app, index| {
+        let mut app = app.borrow_mut(); app.engine.doc.settings.selected_tab = index;
+        if index == 0 { app.engine.doc.settings.active_focus_mode = 0; }
+        if index == 4 && app.engine.doc.settings.stopwatch_enabled { app.engine.doc.settings.active_focus_mode = 1; }
+        if let Some(ui) = app.ui.upgrade() { ui.set_hint_visible(false); }
+        app.commit(); app.refresh();
+    });
     action!(on_clear_message, |app| { let mut app = app.borrow_mut(); app.engine.message.clear(); app.refresh(); });
+    action!(on_draft_changed, |app| {
+        let mut app = app.borrow_mut();
+        if let Some(ui) = app.ui.upgrade() {
+            let duration = ui.get_draft_hour().max(0) as u64 * 3600 + ui.get_draft_minute().max(0) as u64 * 60 + ui.get_draft_second().max(0) as u64;
+            app.engine.doc.settings.focus_duration_seconds = duration.clamp(1, 359999); app.commit(); app.refresh();
+        }
+    });
+    action!(on_change_single_focus, |app| {
+        let mut app = app.borrow_mut(); app.engine.doc.settings.single_focus = !app.engine.doc.settings.single_focus;
+        if app.engine.doc.settings.single_focus { app.select_focus_timer(); }
+        app.commit(); app.refresh();
+    });
+    action!(on_change_stopwatch_enabled, |app| {
+        let mut app = app.borrow_mut(); app.engine.doc.settings.stopwatch_enabled = !app.engine.doc.settings.stopwatch_enabled;
+        if !app.engine.doc.settings.stopwatch_enabled {
+            app.engine.doc.settings.active_focus_mode = 0;
+            if app.engine.doc.stopwatch.running { app.engine.stopwatch_action("toggle"); }
+            if let Some(ui) = app.ui.upgrade() { if ui.get_page() == 4 { ui.set_page(0); } }
+        } else if !app.engine.has_running_countdown() {
+            app.engine.doc.settings.active_focus_mode = 1;
+        }
+        app.commit(); app.refresh();
+    });
+    action!(on_stopwatch_action, |app, verb| {
+        let mut app = app.borrow_mut();
+        if !app.engine.doc.settings.stopwatch_enabled { return; }
+        app.engine.stopwatch_action(verb.as_str()); app.commit(); app.refresh();
+    });
     action!(on_start_countdown, |app| {
         let mut app = app.borrow_mut();
+        if app.engine.doc.settings.single_focus && app.engine.focus_timer().is_some() { return; }
         if let Some(ui) = app.ui.upgrade() {
             let duration = ui.get_draft_hour().max(0) as u64 * 3600 + ui.get_draft_minute().max(0) as u64 * 60 + ui.get_draft_second().max(0) as u64;
             let selected_sound = app.sound_choice(ui.get_draft_sound());
@@ -515,7 +666,14 @@ fn bind(controller: &Controller, ui: &MainWindow) {
             app.refresh();
         }
     });
-    action!(on_timer_action, |app, id, verb| { let mut app = app.borrow_mut(); app.engine.timer_action(id.as_str(), verb.as_str()); app.commit(); app.refresh(); });
+    action!(on_timer_action, |app, id, verb| {
+        let mut app = app.borrow_mut();
+        if verb == "remove" && app.engine.doc.settings.focus_timer_id == id.as_str() {
+            if let Some(timer) = app.engine.focus_timer() { app.engine.doc.settings.focus_duration_seconds = timer.original_ms / 1000; }
+            app.restore_focus_draft();
+        }
+        app.engine.timer_action(id.as_str(), verb.as_str()); app.commit(); app.refresh();
+    });
     action!(on_add_alarm, |app| { open_editor(&app, None); });
     action!(on_alarm_action, |app, id, verb| {
         match verb.as_str() {
@@ -599,6 +757,47 @@ fn bind(controller: &Controller, ui: &MainWindow) {
     action!(on_reset_settings, |app| { confirm(&app, Confirmation::Reset); });
     action!(on_about, |app| { about(&app); });
     action!(on_open_data, |app| { let folder = app.borrow().folders.roaming.clone(); let _ = fs::create_dir_all(&folder); native::open(&folder); });
+    let hint_weak = ui.as_weak();
+    ui.on_info_hint(move |visible| {
+        if let Some(ui) = hint_weak.upgrade() {
+            let visible = visible && ui.get_page() == 3 && ui.get_more_settings_open();
+            if visible {
+                if let Some(position) = native::pointer_position(ui.window()) {
+                    ui.set_hint_x(position.x); ui.set_hint_y(position.y);
+                }
+            }
+            ui.set_hint_visible(visible);
+        }
+    });
+    let weak = Rc::downgrade(controller);
+    let main_weak = ui.as_weak();
+    ui.on_caption_action(move |verb| {
+        // Native maximize may dispatch nested window messages; release App borrows
+        // before the OS call. Dragging is handled entirely by WindowMoveArea.
+        if let Some(app) = weak.upgrade() {
+            match verb.as_str() {
+                "compact" => app.borrow_mut().set_compact(true),
+                "close" => app.borrow_mut().hide_current_window(),
+                action => if let Some(ui) = main_weak.upgrade() { native::caption_action(ui.window(), action); },
+            }
+        }
+    });
+    let weak = Rc::downgrade(controller);
+    let mini_weak = controller.borrow().mini.as_weak();
+    controller.borrow().mini.on_caption_action(move |verb| {
+        if let Some(app) = weak.upgrade() {
+            match verb.as_str() {
+                "restore" => app.borrow_mut().set_compact(false),
+                "close" => app.borrow_mut().hide_current_window(),
+                action => if let Some(ui) = mini_weak.upgrade() { native::caption_action(ui.window(), action); },
+            }
+        }
+    });
+    let weak = Rc::downgrade(controller);
+    controller.borrow().mini.window().on_close_requested(move || {
+        if let Some(app) = weak.upgrade() { app.borrow_mut().hide_current_window(); }
+        slint::CloseRequestResponse::HideWindow
+    });
     let weak = Rc::downgrade(controller);
     ui.window().on_close_requested(move || { if let Some(app) = weak.upgrade() { app.borrow_mut().commit(); } slint::CloseRequestResponse::HideWindow });
 }
@@ -614,6 +813,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         document.settings.custom_sounds.insert(0, data::CustomSound { id: 7, name: if document.settings.custom_name.is_empty() { "自定义提示音".into() } else { document.settings.custom_name.clone() } });
     }
     let ui = MainWindow::new()?;
+    let mini = MiniWindow::new()?;
     i18n::select(document.settings.language);
     ui.window().set_size(slint::LogicalSize::new(document.settings.width, document.settings.height));
     ui.set_page(document.settings.selected_tab);
@@ -621,10 +821,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let day_rows = Rc::new(VecModel::<DayRow>::default()); let week_rows = Rc::new(VecModel::<AlarmRow>::default());
     ui.set_timers(timer_rows.clone().into()); ui.set_alarms(alarm_rows.clone().into());
     ui.set_week_days(day_rows.clone().into()); ui.set_week_items(week_rows.clone().into());
-    let app = Rc::new(RefCell::new(App { ui: ui.as_weak(), engine: Engine::new(document, message), folders,
+    let app = Rc::new(RefCell::new(App { ui: ui.as_weak(), mini, compact: false, mini_positioned: false, engine: Engine::new(document, message), folders,
         player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, week_offset: 0,
         week_day: Local::now().weekday().num_days_from_monday() as i32, editor: None, confirm: None, about: None,
-        alerts: VecDeque::new(), alert: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None }));
+        alerts: VecDeque::new(), alert: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
+        message_seen: String::new(), message_deadline: None }));
+    app.borrow().restore_focus_draft();
     app.borrow().refresh_sound_library(); ui.set_draft_sound(app.borrow().sound_index(app.borrow().engine.doc.settings.default_sound)); bind(&app, &ui); app.borrow().apply_theme(); app.borrow_mut().refresh();
     // Persist migration to this profile only; the WPF profile remains readable by the previous version.
     app.borrow_mut().commit();
@@ -643,7 +845,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let mut app = controller.borrow_mut();
         while let Ok(event) = native_receiver.try_recv() {
             match event {
-                native::Event::Show => { if let Some(ui) = app.ui.upgrade() { native::show(ui.window()); native::theme_frame(ui.window(), None, app.engine.doc.settings.theme == 0); ui.window().request_redraw(); } }
+                native::Event::Show => app.show_current_window(),
                 native::Event::Quit => app.request_quit(),
             }
         }
@@ -666,6 +868,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if app.quit_pending { app.request_quit(); }
         }
         if app.preview_deadline.is_some_and(|deadline| Instant::now() >= deadline) { app.stop_preview(); }
+        if app.message_deadline.is_some_and(|deadline| Instant::now() >= deadline) { app.engine.message.clear(); app.refresh(); }
         let (alerts, changed) = app.engine.tick(); app.alerts.extend(alerts);
         if changed { app.commit(); }
         let second = Local::now().timestamp();
