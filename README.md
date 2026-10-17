@@ -52,7 +52,7 @@ Win7 包已完成编译和静态架构检查，尚未在 Windows 7 真机或虚�
 ## 构建与许可
 
 使用 **Rust + Slint 1.18.1**，原生编译并静态链接语言运行时。
-构建方法、项目结构和体积说明见 [开发文档](docs/BUILDING.zh-CN.md)。
+兼容目标的编译与打包方法见 [COMPATIBILITY.md](COMPATIBILITY.md)，一般项目结构见 [开发文档](docs/BUILDING.zh-CN.md)。
 发布前对备份及开机启动的代码审查记录见 [代码审查](docs/代码审查.md)；该记录不代表实际功能验证通过。
 
 应用代码采用 [Apache-2.0](LICENSE)。第三方许可及素材版权声明见 [NOTICE.txt](NOTICE.txt) 和 [licenses](licenses)。

@@ -1,0 +1,24 @@
+{
+  "version": "1.1.5",
+  "independentFiles": true,
+  "matchingBusinessAndAssets": [
+    "src/main.rs",
+    "src/data.rs",
+    "src/engine.rs",
+    "src/stats.rs",
+    "src/shortcuts.rs",
+    "ui/components.slint",
+    "i18n/messages.json",
+    "assets/sounds/Hanabi.wav.gz",
+    "assets/sounds/Twilight.wav.gz"
+  ],
+  "uiDiff": "About-page target system label only",
+  "compatibilitySpecificFilesPreserved": [
+    "src/native.rs",
+    "src/audio.rs",
+    "vendor",
+    "app.manifest",
+    "build.rs",
+    "build.ps1"
+  ]
+}

@@ -14,21 +14,35 @@
   "inspection": "Release compilation, static PE architecture/import inspection and installer payload comparison.",
   "windows7RuntimeVerified": false,
   "functionalTestsPerformedThisPackaging": false,
-  "platform": "Windows 10/11 x64",
+  "platform": "Windows 7 SP1+ x64 / x86 (SSE2)",
   "artifacts": [
     {
-      "file": "Timoa.exe",
-      "variant": "normal",
+      "file": "Timoa-1.1.5-Win7-x64.exe",
+      "variant": "win7-x64",
       "architecture": "x64",
-      "bytes": 10873344,
-      "sha256": "9981322D2F1208AA79AF22F782B3AB7518D473B061AC2E6DE78E2FFF7D3BF66D"
+      "bytes": 10827776,
+      "sha256": "231B9D6941AED30FBC0221E65A5A38FA266CF1848A96D38BD23951D5F856B6EC"
     },
     {
-      "file": "Timoa-Setup.exe",
-      "variant": "normal",
+      "file": "Timoa-1.1.5-Win7-x64-Setup.exe",
+      "variant": "win7-x64",
       "architecture": "x64",
-      "bytes": 11178059,
-      "sha256": "FABE08C88E46C1CACDB0D6C87BBAC74BEF05EFADDAB66A2A24D492D5098BDBB7"
+      "bytes": 11132974,
+      "sha256": "A7F1B7F29E81BBBAD6730093148EBA94B1DF63A05134CE7085C7B7DB88364C6F"
+    },
+    {
+      "file": "Timoa-1.1.5-Win7-x86.exe",
+      "variant": "win7-x86",
+      "architecture": "x86",
+      "bytes": 10807296,
+      "sha256": "37C75864FD2530BEC2E0C0DE4B76C9749B684837EA7132BE5DB6A07DF0F7019F"
+    },
+    {
+      "file": "Timoa-1.1.5-Win7-x86-Setup.exe",
+      "variant": "win7-x86",
+      "architecture": "x86",
+      "bytes": 11097580,
+      "sha256": "E3C6E2ADB022272C3F6AE77471B8719D227DD19AA381C1081AA36894BD8ED61B"
     }
   ]
 }

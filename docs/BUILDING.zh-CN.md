@@ -1,3 +1,5 @@
+> 本文件记录正常版的历史开发资料。本独立副本的目标系统、构建指令和检查限制以 [COMPATIBILITY.md](../COMPATIBILITY.md) 为准。
+
 # Timoa 1.1.0
 
 面向 Windows 10 / 11 x64 的中文倒计时与闹钟。

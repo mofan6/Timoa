@@ -1760,3 +1760,16 @@ DEALINGS IN THE SOFTWARE.
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+
+===== Compatibility x86 variant =====
+Timoa Windows 7 x86 audio component
+Built from unmodified FFmpeg source commit 46d899d7a02bc63237472cc4897258d5ddf274ac.
+Architecture: i686 / 32-bit Windows, _WIN32_WINNT=0x0601.
+Same audio codecs and demuxers as the x64 component.
+Build script: third-party/FFmpeg/build-audio-compat.ps1 in the matching application source archive.
+Configure options: third-party/FFmpeg/configure-flags.txt, with the architecture, compiler,
+extra-version and Windows minimum version overrides in the compatibility build script.
+LGPL 2.1 or later; GPL, nonfree and version3 options disabled.
+Original upstream and runtime license files are included without removal.
+The original NOTICE.txt describes the x64 reference build; this file records x86 differences.

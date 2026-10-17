@@ -1723,8 +1723,6 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-winit"
 version = "1.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dae4fcf1b19e9cb109984d2af87d2b9485388c619265bff71dd523133888bee2"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -5090,8 +5088,6 @@ dependencies = [
 [[package]]
 name = "windows-link"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 
 [[package]]
 name = "windows-numerics"
