@@ -7,14 +7,15 @@ use std::os::windows::process::CommandExt;
 
 const DECODER: &[u8] = include_bytes!("../assets/audio-tools.zip");
 const MAX_BYTES: u64 = 512 * 1024 * 1024;
-pub const NAMES: [&str; 8] = ["静音", "轻柔铃声", "马林巴琴", "钟声", "钢琴旋律", "电钢琴旋律", "铃声旋律", "自定义提示音"];
-const WAVS: [&[u8]; 6] = [
+const WAVS: [&[u8]; data::BUILTIN_SOUNDS.len() - 1] = [
     include_bytes!("../assets/sounds/soft-chime.wav.gz"),
     include_bytes!("../assets/sounds/marimba.wav.gz"),
     include_bytes!("../assets/sounds/bell.wav.gz"),
     include_bytes!("../assets/sounds/Piano-Jingle.wav.gz"),
     include_bytes!("../assets/sounds/Electric-Piano-Jingle.wav.gz"),
     include_bytes!("../assets/sounds/Bell-Jingle.wav.gz"),
+    include_bytes!("../assets/sounds/Hanabi.wav.gz"),
+    include_bytes!("../assets/sounds/Twilight.wav.gz"),
 ];
 
 #[derive(Default)]
@@ -24,10 +25,10 @@ impl Player {
         self.stop();
         if choice == 0 { return Ok(()); }
         let mut bytes = Vec::new();
-        if choice >= 7 {
+        if let Some(index) = data::builtin_sound_index(choice) {
+            GzDecoder::new(WAVS[index - 1]).read_to_end(&mut bytes).map_err(|_| "无法读取内置提示音。")?;
+        } else if choice >= 7 {
             bytes = fs::read(folders.custom_sound(choice)).map_err(|_| "请先在设置中导入自定义提示音。")?;
-        } else if (1..=6).contains(&choice) {
-            GzDecoder::new(WAVS[choice as usize - 1]).read_to_end(&mut bytes).map_err(|_| "无法读取内置提示音。")?;
         }
         if bytes.len() < 44 { return Err("提示音内容为空或已损坏。".into()); }
         self.data = bytes;

@@ -5,6 +5,7 @@ use std::{collections::{HashMap, HashSet}, time::{Duration, Instant}};
 
 #[derive(Clone)]
 pub struct Alert {
+    pub token: String,
     pub id: String,
     pub title: String,
     pub label: String,
@@ -20,6 +21,10 @@ pub struct Engine {
     warned: HashSet<(String, i64)>,
     pub message: String,
     stopwatch_started: Option<Instant>,
+    cycle_waits: HashMap<String, Instant>,
+    cycle_restarted: Vec<String>,
+    sampled_remaining: HashMap<String, u64>,
+    sampled_stopwatch_ms: u64,
 }
 
 impl Engine {
@@ -32,9 +37,17 @@ impl Engine {
         let now = now_ms();
         let mut missed = 0;
         for timer in &mut doc.countdowns {
+            // Countdowns continue across closing/reopening; their saved deadline
+            // lets us locate only the known time since the last snapshot.
+            if !timer.finished && !timer.paused {
+                let current = (timer.ends_at_ms.saturating_sub(now).max(0) as u64).min(timer.remaining_ms);
+                crate::stats::add_span(&mut timer.focus_slots, now.min(timer.ends_at_ms), timer.remaining_ms.saturating_sub(current));
+                timer.remaining_ms = current;
+            }
             if !timer.finished && !timer.paused && now.saturating_sub(timer.ends_at_ms) > 300_000 {
                 timer.finished = true; timer.remaining_ms = 0; missed += 1;
                 doc.total_focus_ms = doc.total_focus_ms.saturating_add(timer.original_ms);
+                crate::stats::record_completion(&mut doc.focus_days, &std::mem::take(&mut timer.focus_slots), timer.ends_at_ms);
             }
         }
         if missed > 0 { message = format!("离开期间有 {missed} 项倒计时已结束。"); }
@@ -45,7 +58,10 @@ impl Engine {
             .map(|a| (a.id.clone(), a.fire_at)).collect();
         // A restored stopwatch resumes paused, so time with the app closed is excluded.
         doc.stopwatch.running = false;
-        Self { doc, deadlines, warned, message, stopwatch_started: None }
+        let sampled_remaining = doc.countdowns.iter().filter(|timer| !timer.finished && !timer.paused)
+            .map(|timer| (timer.id.clone(), timer.remaining_ms)).collect();
+        let sampled_stopwatch_ms = doc.stopwatch.elapsed_ms;
+        Self { doc, deadlines, warned, message, stopwatch_started: None, cycle_waits: HashMap::new(), cycle_restarted: vec![], sampled_remaining, sampled_stopwatch_ms }
     }
     pub fn remaining(&self, timer: &Countdown) -> u64 {
         if timer.finished { return 0; }
@@ -54,15 +70,57 @@ impl Engine {
     }
     pub fn snapshot(&self) -> Document {
         let mut doc = self.doc.clone();
+        let wall = now_ms();
         doc.stopwatch.elapsed_ms = self.stopwatch_elapsed();
+        if self.doc.stopwatch.running {
+            crate::stats::add_span(&mut doc.stopwatch.focus_slots, wall, doc.stopwatch.elapsed_ms.saturating_sub(self.sampled_stopwatch_ms));
+        }
         for timer in &mut doc.countdowns {
-            timer.remaining_ms = self.remaining(timer);
-            if !timer.paused && !timer.finished { timer.ends_at_ms = now_ms() + timer.remaining_ms as i64; }
+            let remaining = self.remaining(timer);
+            if !timer.paused && !timer.finished {
+                let previous = self.sampled_remaining.get(&timer.id).copied().unwrap_or(timer.remaining_ms);
+                crate::stats::add_span(&mut timer.focus_slots, self.sample_end(&timer.id, wall), previous.saturating_sub(remaining));
+            }
+            timer.remaining_ms = remaining;
+            if !timer.paused && !timer.finished { timer.ends_at_ms = self.sample_end(&timer.id, wall).saturating_add(remaining as i64); }
         }
         doc
     }
+    fn sample_end(&self, id: &str, wall: i64) -> i64 {
+        let overdue = self.deadlines.get(id).map(|deadline| Instant::now().saturating_duration_since(*deadline).as_millis() as i64).unwrap_or(0);
+        wall.saturating_sub(overdue)
+    }
+    fn sample_focus(&mut self) {
+        let wall = now_ms();
+        let samples: Vec<_> = self.doc.countdowns.iter().filter(|timer| !timer.finished && !timer.paused).map(|timer| {
+            let remaining = self.remaining(timer);
+            let previous = self.sampled_remaining.get(&timer.id).copied().unwrap_or(timer.remaining_ms);
+            (timer.id.clone(), remaining, previous.saturating_sub(remaining), self.sample_end(&timer.id, wall))
+        }).collect();
+        for (id, remaining, amount, end) in samples {
+            if let Some(timer) = self.doc.countdowns.iter_mut().find(|timer| timer.id == id) {
+                crate::stats::add_span(&mut timer.focus_slots, end, amount);
+            }
+            self.sampled_remaining.insert(id, remaining);
+        }
+        self.sampled_remaining.retain(|id, _| self.doc.countdowns.iter().any(|timer| &timer.id == id && !timer.finished && !timer.paused));
+        let elapsed = self.stopwatch_elapsed();
+        if self.doc.stopwatch.running {
+            crate::stats::add_span(&mut self.doc.stopwatch.focus_slots, wall, elapsed.saturating_sub(self.sampled_stopwatch_ms));
+        }
+        self.sampled_stopwatch_ms = elapsed;
+    }
     pub fn focus_timer(&self) -> Option<&Countdown> {
         self.doc.countdowns.iter().find(|timer| timer.id == self.doc.settings.focus_timer_id)
+    }
+    pub fn cycle_remaining(&self, id: &str) -> Option<u64> {
+        self.cycle_waits.get(id).map(|deadline| deadline.saturating_duration_since(Instant::now()).as_millis() as u64)
+    }
+    pub fn take_cycle_restarts(&mut self) -> Vec<String> { std::mem::take(&mut self.cycle_restarted) }
+    pub fn cancel_cycle(&mut self, id: &str) { self.cycle_waits.remove(id); }
+    pub fn set_auto_cycle(&mut self, enabled: bool) {
+        self.doc.settings.auto_cycle = enabled;
+        if !enabled { self.cycle_waits.clear(); }
     }
     pub fn upcoming_alarms(&self, now: i64, seconds: i64) -> Vec<&Alarm> {
         let until = now.saturating_add(seconds.max(0));
@@ -89,6 +147,12 @@ impl Engine {
         }
     }
     fn pause_countdowns(&mut self) {
+        // Starting a stopwatch also pauses a pending next round, preserving exclusivity.
+        for (id, _) in self.cycle_waits.drain() {
+            if let Some(timer) = self.doc.countdowns.iter_mut().find(|timer| timer.id == id) {
+                timer.finished = false; timer.paused = true; timer.remaining_ms = timer.original_ms;
+            }
+        }
         let running: Vec<_> = self.doc.countdowns.iter().enumerate()
             .filter(|(_, timer)| !timer.paused && !timer.finished)
             .map(|(index, timer)| (index, self.remaining(timer))).collect();
@@ -101,6 +165,7 @@ impl Engine {
         }
     }
     pub fn stopwatch_action(&mut self, action: &str) {
+        self.sample_focus();
         let elapsed = self.stopwatch_elapsed();
         match action {
             "toggle" => {
@@ -113,8 +178,11 @@ impl Engine {
                 }
             }
             "reset" | "finish" => {
-                if action == "finish" { self.doc.total_focus_ms = self.doc.total_focus_ms.saturating_add(elapsed); }
-                self.doc.stopwatch = Stopwatch::default(); self.stopwatch_started = None;
+                if action == "finish" {
+                    self.doc.total_focus_ms = self.doc.total_focus_ms.saturating_add(elapsed);
+                    if elapsed > 0 { crate::stats::record_completion(&mut self.doc.focus_days, &self.doc.stopwatch.focus_slots, now_ms()); }
+                }
+                self.doc.stopwatch = Stopwatch::default(); self.stopwatch_started = None; self.sampled_stopwatch_ms = 0;
             }
             _ => {}
         }
@@ -122,18 +190,26 @@ impl Engine {
     pub fn start(&mut self, seconds: u64, label: &str, selected_sound: i32) -> Result<(), String> {
         if seconds == 0 || seconds > 360000 { return Err("请设置大于零、最多 99 小时的倒计时。".into()); }
         if self.doc.countdowns.len() >= 100 { return Err("最多同时保留 100 项倒计时，请先移除已完成项目。".into()); }
-        self.pause_stopwatch(); self.doc.settings.active_focus_mode = 0;
+        self.sample_focus(); self.pause_stopwatch(); self.doc.settings.active_focus_mode = 0;
         let ms = seconds * 1000;
         let id = new_id();
         self.deadlines.insert(id.clone(), Instant::now() + Duration::from_millis(ms));
+        self.sampled_remaining.insert(id.clone(), ms);
         self.doc.settings.focus_timer_id = id.clone();
         self.doc.settings.focus_duration_seconds = seconds;
-        self.doc.countdowns.push(Countdown { id, label: text(label), original_ms: ms, remaining_ms: ms,
+        self.doc.countdowns.push(Countdown { focus_slots: vec![], id, label: text(label), original_ms: ms, remaining_ms: ms,
             ends_at_ms: now_ms() + ms as i64, paused: false, finished: false, sound: sound(selected_sound) });
         Ok(())
     }
     pub fn timer_action(&mut self, id: &str, action: &str) {
+        self.sample_focus();
         let Some(index) = self.doc.countdowns.iter().position(|t| t.id == id) else { return; };
+        let waiting = self.cycle_waits.remove(id).is_some();
+        if waiting && action == "toggle" {
+            let timer = &mut self.doc.countdowns[index];
+            timer.finished = false; timer.paused = true; timer.remaining_ms = timer.original_ms;
+            return;
+        }
         let timer = &self.doc.countdowns[index];
         let will_run = action == "toggle" && timer.paused && !timer.finished || action == "reset" && !timer.paused;
         if will_run {
@@ -144,16 +220,17 @@ impl Engine {
         let timer = &mut self.doc.countdowns[index];
         match action {
             "remove" => {
-                self.doc.countdowns.remove(index); self.deadlines.remove(id);
+                self.doc.countdowns.remove(index); self.deadlines.remove(id); self.sampled_remaining.remove(id);
                 if self.doc.settings.focus_timer_id == id { self.doc.settings.focus_timer_id.clear(); }
             }
             "toggle" if !timer.finished => {
                 timer.paused = !timer.paused;
                 timer.remaining_ms = remaining;
-                if timer.paused { self.deadlines.remove(id); }
-                else { self.deadlines.insert(id.into(), Instant::now() + Duration::from_millis(remaining)); timer.ends_at_ms = now_ms() + remaining as i64; }
+                if timer.paused { self.deadlines.remove(id); self.sampled_remaining.remove(id); }
+                else { self.sampled_remaining.insert(id.into(), remaining); self.deadlines.insert(id.into(), Instant::now() + Duration::from_millis(remaining)); timer.ends_at_ms = now_ms() + remaining as i64; }
             }
             "reset" => {
+                timer.focus_slots.clear(); self.sampled_remaining.insert(id.into(), timer.original_ms);
                 timer.finished = false;
                 timer.remaining_ms = timer.original_ms;
                 if !timer.paused { self.deadlines.insert(id.into(), Instant::now() + Duration::from_millis(timer.original_ms)); }
@@ -178,8 +255,17 @@ impl Engine {
     }
     pub fn remove_alarm(&mut self, id: &str) { self.doc.alarms.retain(|a| a.id != id); }
     pub fn tick(&mut self) -> (Vec<Alert>, bool) {
+        self.sample_focus();
         let mut alerts = vec![];
         let mut changed = false;
+        if !self.doc.settings.auto_cycle { self.cycle_waits.clear(); }
+        let ready: Vec<String> = self.cycle_waits.iter().filter(|(_, deadline)| Instant::now() >= **deadline).map(|(id, _)| id.clone()).collect();
+        for id in ready {
+            self.cycle_waits.remove(&id);
+            if !self.doc.stopwatch.running && self.doc.countdowns.iter().any(|timer| timer.id == id && timer.finished && !timer.paused) {
+                self.timer_action(&id, "reset"); self.cycle_restarted.push(id); changed = true;
+            }
+        }
         if self.doc.stopwatch.running && self.stopwatch_elapsed() >= 359_999_000 {
             self.stopwatch_action("toggle"); changed = true;
         }
@@ -188,10 +274,15 @@ impl Engine {
         for id in due {
             if let Some(timer) = self.doc.countdowns.iter_mut().find(|t| t.id == id) {
                 self.doc.total_focus_ms = self.doc.total_focus_ms.saturating_add(timer.original_ms);
+                crate::stats::record_completion(&mut self.doc.focus_days, &std::mem::take(&mut timer.focus_slots), timer.ends_at_ms);
+                self.sampled_remaining.remove(&id);
                 timer.finished = true;
                 timer.remaining_ms = 0;
                 self.deadlines.remove(&id);
-                alerts.push(Alert { id, title: "时间到了".into(), label: if timer.label.is_empty() { "这一轮专注已完成。".into() } else { timer.label.clone() },
+                if self.doc.settings.auto_cycle {
+                    self.cycle_waits.insert(id.clone(), Instant::now() + Duration::from_secs(self.doc.settings.cycle_interval_seconds.min(3600).max(1)));
+                }
+                alerts.push(Alert { token: new_id(), id, title: "时间到了".into(), label: if timer.label.is_empty() { "这一轮专注已完成。".into() } else { timer.label.clone() },
                     sound: timer.sound, warning: false, countdown: true, default_label: timer.label.is_empty() });
                 changed = true;
             }
@@ -202,7 +293,7 @@ impl Engine {
         for alarm in &mut self.doc.alarms {
             if !alarm.enabled { continue; }
             if alarm.warn_before && now >= alarm.fire_at - 300 && now < alarm.fire_at && self.warned.insert((alarm.id.clone(), alarm.fire_at)) {
-                alerts.push(Alert { id: alarm.id.clone(), title: "还有 5 分钟".into(), label: alarm.label.clone(),
+                alerts.push(Alert { token: new_id(), id: alarm.id.clone(), title: "还有 5 分钟".into(), label: alarm.label.clone(),
                     sound: if alarm.sound == 0 { 0 } else { 1 }, warning: true, countdown: false, default_label: false });
             }
             if now < alarm.fire_at { continue; }
@@ -211,7 +302,7 @@ impl Engine {
             if alarm.days == 0 { remove.push(alarm.id.clone()); }
             else if let Some(next) = next_occurrence(now, alarm.hour, alarm.minute, alarm.days) { alarm.fire_at = next; }
             if now - occurrence <= 300 {
-                alerts.push(Alert { id: alarm.id.clone(), title: "闹钟提醒".into(), label: if alarm.label.is_empty() { "计划的时间到了。".into() } else { alarm.label.clone() },
+                alerts.push(Alert { token: new_id(), id: alarm.id.clone(), title: "闹钟提醒".into(), label: if alarm.label.is_empty() { "计划的时间到了。".into() } else { alarm.label.clone() },
                     sound: alarm.sound, warning: false, countdown: false, default_label: alarm.label.is_empty() });
             } else { missed += 1; }
             changed = true;
@@ -388,5 +479,135 @@ mod tests {
         }
         let alarms = engine.upcoming_alarms(now, 1800);
         assert_eq!(alarms.len(), 2); assert_eq!(alarms[0].fire_at, now); assert_eq!(alarms[1].fire_at, now + 1800);
+    }
+
+    #[test]
+    fn automatic_cycle_waits_then_restarts_without_double_counting() {
+        let mut engine = engine(); engine.set_auto_cycle(true);
+        engine.doc.settings.cycle_interval_seconds = 0;
+        engine.start(5, "cycle", 0).unwrap(); let id = engine.doc.settings.focus_timer_id.clone();
+        engine.deadlines.insert(id.clone(), Instant::now() - Duration::from_secs(1));
+        let (alerts, changed) = engine.tick();
+        assert!(changed); assert_eq!(alerts.len(), 1); assert!(!alerts[0].token.is_empty());
+        assert!(engine.focus_timer().unwrap().finished); assert_eq!(engine.doc.total_focus_ms, 5000);
+        assert!(engine.cycle_remaining(&id).unwrap() > 800);
+        engine.cycle_waits.insert(id.clone(), Instant::now() - Duration::from_millis(1));
+        let (alerts, changed) = engine.tick();
+        assert!(changed); assert!(alerts.is_empty()); assert_eq!(engine.take_cycle_restarts(), vec![id]);
+        assert!(!engine.focus_timer().unwrap().finished); assert!(engine.has_running_countdown());
+        assert_eq!(engine.doc.total_focus_ms, 5000);
+        assert_eq!(engine.doc.focus_days.iter().map(|day| day.rounds).sum::<u64>(), 1);
+        assert_eq!(engine.doc.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>(), 5000);
+    }
+
+    #[test]
+    fn pausing_or_disabling_cycle_cancels_pending_restart() {
+        let mut engine = engine(); engine.set_auto_cycle(true);
+        engine.start(1, "cycle", 0).unwrap(); let id = engine.doc.settings.focus_timer_id.clone();
+        engine.deadlines.insert(id.clone(), Instant::now() - Duration::from_secs(1)); engine.tick();
+        engine.timer_action(&id, "toggle");
+        assert!(engine.cycle_remaining(&id).is_none());
+        let timer = engine.focus_timer().unwrap(); assert!(timer.paused); assert!(!timer.finished); assert_eq!(timer.remaining_ms, 1000);
+        engine.timer_action(&id, "toggle");
+        engine.deadlines.insert(id.clone(), Instant::now() - Duration::from_secs(1)); engine.tick();
+        engine.set_auto_cycle(false); assert!(engine.cycle_remaining(&id).is_none());
+        assert!(engine.focus_timer().unwrap().finished);
+    }
+
+    #[test]
+    fn stopwatch_also_pauses_a_countdown_between_rounds() {
+        let mut engine = engine(); engine.set_auto_cycle(true);
+        engine.start(1, "cycle", 0).unwrap(); let id = engine.doc.settings.focus_timer_id.clone();
+        engine.deadlines.insert(id.clone(), Instant::now() - Duration::from_secs(1)); engine.tick();
+        engine.stopwatch_action("toggle");
+        assert!(engine.doc.stopwatch.running); assert!(engine.cycle_remaining(&id).is_none());
+        let timer = engine.focus_timer().unwrap(); assert!(timer.paused); assert!(!timer.finished);
+        assert_eq!(engine.doc.total_focus_ms, 1000);
+    }
+
+    #[test]
+    fn reminder_and_cycle_options_roundtrip_in_backup_and_validate_limits() {
+        let mut document = Document::default();
+        document.settings.quick_snooze_seconds = vec![1, 600, 9999, 42];
+        document.settings.auto_cycle = true; document.settings.cycle_interval_seconds = 4000;
+        let restored = parse(&serde_json::to_vec(&document).unwrap()).unwrap();
+        assert_eq!(restored.settings.quick_snooze_seconds, vec![1, 600, 5999]);
+        assert!(restored.settings.auto_cycle); assert_eq!(restored.settings.cycle_interval_seconds, 3600);
+        let legacy = parse(br#"{"format":"TIMO.Native.v1","settings":{},"alarms":[],"countdowns":[]}"#).unwrap();
+        assert!(!legacy.settings.auto_cycle);
+        assert_eq!(legacy.settings.quick_snooze_seconds, vec![300, 600, 900]);
+    }
+
+    #[test]
+    fn daily_countdown_history_waits_for_completion_and_keeps_paused_progress() {
+        let mut engine = engine(); engine.start(60, "focus", 0).unwrap();
+        let id = engine.doc.settings.focus_timer_id.clone();
+        engine.deadlines.insert(id.clone(), Instant::now() + Duration::from_secs(30));
+        engine.timer_action(&id, "toggle");
+        let pending = engine.focus_timer().unwrap().focus_slots.iter().map(|slot| slot.milliseconds).sum::<u64>();
+        assert!((29_950..=30_050).contains(&pending));
+        assert!(engine.doc.focus_days.is_empty());
+        engine.tick();
+        assert_eq!(engine.focus_timer().unwrap().focus_slots.iter().map(|slot| slot.milliseconds).sum::<u64>(), pending);
+        engine.timer_action(&id, "toggle");
+        engine.deadlines.insert(id, Instant::now() - Duration::from_secs(1));
+        engine.tick();
+        let recorded = engine.doc.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>();
+        assert!((59_950..=60_000).contains(&recorded));
+        assert_eq!(engine.doc.focus_days.iter().map(|day| day.rounds).sum::<u64>(), 1);
+        engine.tick();
+        assert_eq!(engine.doc.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>(), recorded);
+    }
+
+    #[test]
+    fn pending_focus_snapshot_restores_without_double_counting() {
+        let mut engine = engine(); engine.start(60, "focus", 0).unwrap();
+        let id = engine.doc.settings.focus_timer_id.clone();
+        engine.deadlines.insert(id.clone(), Instant::now() + Duration::from_secs(30));
+        let snapshot = engine.snapshot();
+        assert!(engine.doc.countdowns[0].focus_slots.is_empty()); // Snapshot is a copy.
+        assert!(engine.doc.focus_days.is_empty());
+        let mut restored = Engine::new(parse(&serde_json::to_vec(&snapshot).unwrap()).unwrap(), String::new());
+        restored.deadlines.insert(id, Instant::now() - Duration::from_secs(1));
+        restored.tick();
+        let recorded = restored.doc.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>();
+        assert!((59_950..=60_050).contains(&recorded));
+        assert_eq!(restored.doc.focus_days.iter().map(|day| day.rounds).sum::<u64>(), 1);
+        let mut reopened = Engine::new(parse(&serde_json::to_vec(&restored.snapshot()).unwrap()).unwrap(), String::new());
+        reopened.tick();
+        assert_eq!(reopened.doc.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>(), recorded);
+    }
+
+    #[test]
+    fn stopwatch_history_is_added_only_when_finished_and_reset_discards_it() {
+        let mut engine = engine(); engine.stopwatch_action("toggle");
+        engine.stopwatch_started = Some(Instant::now() - Duration::from_millis(1500));
+        engine.stopwatch_action("toggle");
+        assert!(engine.doc.focus_days.is_empty());
+        engine.stopwatch_action("finish");
+        let recorded = engine.doc.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>();
+        assert!((1500..=1550).contains(&recorded));
+        assert_eq!(engine.doc.focus_days.iter().map(|day| day.rounds).sum::<u64>(), 1);
+        engine.stopwatch_action("finish");
+        engine.stopwatch_action("toggle");
+        engine.stopwatch_started = Some(Instant::now() - Duration::from_secs(10));
+        engine.stopwatch_action("reset");
+        assert_eq!(engine.doc.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>(), recorded);
+    }
+
+    #[test]
+    fn daily_history_and_three_presets_roundtrip_and_old_default_is_ignored() {
+        let mut engine = engine(); engine.start(1, "focus", 0).unwrap();
+        engine.deadlines.insert(engine.doc.settings.focus_timer_id.clone(), Instant::now() - Duration::from_secs(1));
+        engine.tick();
+        engine.doc.settings.quick_snooze_seconds = vec![6, 900, 1200];
+        let bytes = serde_json::to_vec(&engine.snapshot()).unwrap();
+        assert!(!String::from_utf8_lossy(&bytes).contains("\"snoozeSeconds\""));
+        let restored = parse(&bytes).unwrap();
+        assert_eq!(restored.settings.quick_snooze_seconds, vec![6, 900, 1200]);
+        assert_eq!(restored.focus_days.iter().flat_map(|day| day.hours_ms).sum::<u64>(), 1000);
+        let legacy = parse(br#"{"format":"TIMO.Native.v1","settings":{"snoozeSeconds":42,"quickSnoozeSeconds":[6,900,1200]},"alarms":[],"countdowns":[]}"#).unwrap();
+        assert_eq!(legacy.settings.quick_snooze_seconds, vec![6, 900, 1200]);
+        assert!(legacy.focus_days.is_empty());
     }
 }

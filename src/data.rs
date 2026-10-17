@@ -4,6 +4,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{fs, io::Write, path::{Path, PathBuf}, sync::atomic::{AtomicU64, Ordering}};
 
+// Stable IDs keep older backups and custom audio references unchanged.
+// The last two positive IDs are reserved and never allocated to custom sounds.
+pub const BUILTIN_SOUNDS: [(i32, &str); 9] = [
+    (0, "静音"), (1, "轻柔铃声"), (2, "马林巴琴"), (3, "钟声"),
+    (4, "钢琴旋律"), (5, "电钢琴旋律"), (6, "铃声旋律"),
+    (i32::MAX - 1, "花火大会"), (i32::MAX, "黄昏之时"),
+];
+pub fn builtin_sound_index(id: i32) -> Option<usize> {
+    BUILTIN_SOUNDS.iter().position(|(sound, _)| *sound == id)
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
@@ -21,11 +32,15 @@ pub struct Settings {
     pub focus_timer_id: String,
     pub focus_duration_seconds: u64,
     pub active_focus_mode: i32,
+    pub quick_snooze_seconds: Vec<u64>,
+    pub auto_cycle: bool,
+    pub cycle_interval_seconds: u64,
 }
 impl Default for Settings {
     fn default() -> Self { Self { default_sound: 0, custom_name: String::new(), startup: false,
         width: 480., height: 760., selected_tab: 0, language: 0, theme: 0, custom_sounds: vec![],
-        single_focus: false, stopwatch_enabled: false, focus_timer_id: String::new(), focus_duration_seconds: 1500, active_focus_mode: 0 } }
+        single_focus: false, stopwatch_enabled: false, focus_timer_id: String::new(), focus_duration_seconds: 1500, active_focus_mode: 0,
+        quick_snooze_seconds: vec![300, 600, 900], auto_cycle: false, cycle_interval_seconds: 3 } }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -49,6 +64,7 @@ pub struct Alarm {
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Countdown {
+    pub focus_slots: Vec<crate::stats::FocusSlot>,
     pub id: String,
     pub label: String,
     pub original_ms: u64,
@@ -62,6 +78,7 @@ pub struct Countdown {
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Stopwatch {
+    pub focus_slots: Vec<crate::stats::FocusSlot>,
     pub elapsed_ms: u64,
     pub running: bool,
 }
@@ -69,6 +86,7 @@ pub struct Stopwatch {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Document {
+    pub focus_days: Vec<crate::stats::FocusDay>,
     pub format: String,
     pub settings: Settings,
     pub alarms: Vec<Alarm>,
@@ -79,7 +97,7 @@ pub struct Document {
 }
 impl Default for Document {
     fn default() -> Self { Self { format: "TIMO.Native.v1".into(), settings: Settings::default(),
-        alarms: vec![], countdowns: vec![], total_focus_ms: 0, focus_stats_initialized: false, stopwatch: Stopwatch::default() } }
+        alarms: vec![], countdowns: vec![], total_focus_ms: 0, focus_stats_initialized: false, stopwatch: Stopwatch::default(), focus_days: vec![] } }
 }
 
 #[derive(Clone)]
@@ -153,11 +171,19 @@ pub fn sanitize(mut doc: Document) -> Document {
     doc.settings.focus_duration_seconds = doc.settings.focus_duration_seconds.clamp(1, 359999);
     doc.settings.active_focus_mode = if doc.settings.stopwatch_enabled { doc.settings.active_focus_mode.clamp(0, 1) } else { 0 };
     doc.settings.focus_timer_id = text(&doc.settings.focus_timer_id);
+    doc.focus_days = crate::stats::sanitize_days(doc.focus_days);
+    crate::stats::sanitize_slots(&mut doc.stopwatch.focus_slots);
+    doc.settings.quick_snooze_seconds.truncate(3);
+    while doc.settings.quick_snooze_seconds.len() < 3 {
+        doc.settings.quick_snooze_seconds.push([300, 600, 900][doc.settings.quick_snooze_seconds.len()]);
+    }
+    for seconds in &mut doc.settings.quick_snooze_seconds { *seconds = (*seconds).clamp(1, 5999); }
+    doc.settings.cycle_interval_seconds = doc.settings.cycle_interval_seconds.min(3600);
     doc.stopwatch.elapsed_ms = doc.stopwatch.elapsed_ms.min(359_999_000);
     doc.settings.theme = doc.settings.theme.clamp(0, 1);
     doc.settings.language = doc.settings.language.clamp(0, 2);
     let mut sound_ids = std::collections::HashSet::new();
-    doc.settings.custom_sounds.retain(|s| s.id >= 7 && sound_ids.insert(s.id));
+    doc.settings.custom_sounds.retain(|s| s.id >= 7 && builtin_sound_index(s.id).is_none() && sound_ids.insert(s.id));
     doc.settings.custom_sounds.truncate(1000);
     for item in &mut doc.settings.custom_sounds { item.name = text(&item.name); }
     let mut ids = std::collections::HashSet::new();
@@ -174,6 +200,7 @@ pub fn sanitize(mut doc: Document) -> Document {
     doc.countdowns.retain(|t| t.original_ms > 0 && t.original_ms <= 360_000_000 && (t.id.is_empty() || ids.insert(t.id.clone())));
     doc.countdowns.truncate(100);
     for t in &mut doc.countdowns {
+        crate::stats::sanitize_slots(&mut t.focus_slots);
         if t.id.is_empty() { t.id = new_id(); }
         t.label = text(&t.label); t.sound = sound(t.sound); t.remaining_ms = t.remaining_ms.min(t.original_ms);
     }

@@ -204,6 +204,7 @@ export component ActionButton inherits Rectangle {
 
 export component Field inherits Rectangle {
     in-out property<string> value;
+    callback editing-changed(bool);
     in property<string> placeholder;
     in property<bool> enabled: true;
     height: 44px;
@@ -222,6 +223,7 @@ export component Field inherits Rectangle {
         visible: root.value == "";
     }
     edit := TextInput {
+        changed has-focus => { root.editing-changed(self.has-focus); }
         x: 12px; width: parent.width - 24px; height: parent.height;
         text <=> root.value;
         enabled: root.enabled;
@@ -474,6 +476,63 @@ export component TimePicker inherits Rectangle {
                     spacing: 8px;
                     ActionButton { label: @tr("取消"); clicked => { picker.close(); } }
                     ActionButton { label: @tr("确定"); primary: true; clicked => { root.accept-time(); } }
+                }
+            }
+        }
+    }
+}
+
+export component DurationPicker inherits Rectangle {
+    in-out property<int> seconds;
+    in property<int> max-seconds: 5999;
+    in property<bool> allow-zero: false;
+    property<int> draft-minute;
+    property<int> draft-second;
+    callback changed();
+    height: 44px; min-width: 80px;
+    background: Theme.control; border-radius: 10px; border-width: 0.8px;
+    border-color: duration-touch.has-hover ? Theme.accent-line : Theme.input-line;
+    property<int> minutes: Math.floor(root.seconds / 60);
+    property<int> seconds-part: Math.mod(root.seconds, 60);
+    Text {
+        text: (root.minutes < 10 ? "0" : "") + root.minutes + ":" + (root.seconds-part < 10 ? "0" : "") + root.seconds-part;
+        font-family: "Bahnschrift"; font-size: 20px; font-weight: 300;
+        color: Theme.text; horizontal-alignment: center; vertical-alignment: center;
+    }
+    function open-picker() {
+        root.draft-minute = root.minutes; root.draft-second = root.seconds-part; duration-popup.show();
+    }
+    forward-focus: duration-keys;
+    duration-keys := FocusScope { focus-on-click: false; key-pressed(event) => {
+        if (event.text == Key.Return || event.text == " ") { root.open-picker(); return accept; } return reject;
+    } }
+    duration-touch := TouchArea { mouse-cursor: pointer;
+        pointer-event(event) => { if (event.kind == PointerEventKind.down) { duration-keys.focus(); } }
+        clicked => { root.open-picker(); }
+    }
+    duration-popup := PopupWindow {
+        close-policy: close-on-click-outside;
+        x: (root.width - 280px) / 2; y: root.height + 4px;
+        width: 280px; height: 320px;
+        Rectangle { background: Theme.card; border-radius: 16px; border-width: 0.8px; border-color: Theme.accent-line;
+            VerticalLayout { padding: 16px; spacing: 12px;
+                Text { text: @tr("滑动选择时长"); color: Theme.muted; font-size: 12px; height: 18px; }
+                HorizontalLayout { spacing: 10px;
+                    VerticalLayout { spacing: 4px;
+                        Text { text: @tr("分钟"); color: Theme.faint; font-size: 11px; horizontal-alignment: center; height: 16px; }
+                        Wheel { value <=> root.draft-minute; limit: Math.floor(root.max-seconds / 60) + 1; label: @tr("分钟"); }
+                    }
+                    VerticalLayout { spacing: 4px;
+                        Text { text: @tr("秒"); color: Theme.faint; font-size: 11px; horizontal-alignment: center; height: 16px; }
+                        Wheel { value <=> root.draft-second; limit: root.draft-minute * 60 >= root.max-seconds ? 1 : 60; label: @tr("秒"); }
+                    }
+                }
+                HorizontalLayout { spacing: 8px; height: 36px;
+                    ActionButton { label: @tr("取消"); clicked => { duration-popup.close(); } }
+                    ActionButton { label: @tr("确定"); primary: true; clicked => {
+                        root.seconds = max(root.allow-zero ? 0 : 1, min(root.max-seconds, root.draft-minute * 60 + root.draft-second));
+                        root.changed(); duration-popup.close();
+                    } }
                 }
             }
         }

@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-17",
+  "normalCompile": "success",
+  "codeLogicChecks": {
+    "passed": 23,
+    "failed": 0,
+    "usesActualWindows": false
+  },
+  "translationCoverage": "127 UI translation keys covered in Simplified Chinese, Traditional Chinese and English",
+  "dailyFocus": {
+    "completedRoundsOnly": true,
+    "pausedTimeExcluded": true,
+    "pendingSnapshotPreserved": true,
+    "crossMidnightHourlyBuckets": true,
+    "backupRoundtrip": true,
+    "legacyHistoryNotInvented": true
+  },
+  "hourlyChart": {
+    "scaleMinutes": 60,
+    "axisMinutes": [0, 30, 60],
+    "minimumVisibleBarPixels": 1.5,
+    "concurrentOverflowMarked": true
+  },
+  "nextRoundPresets": 3,
+  "defaultSnoozeRemoved": true,
+  "miniFinishTime": true,
+  "win7SourceSynced": true,
+  "win7Built": false,
+  "packaged": false,
+  "preview": "Launched for user review: D:\\CodexBuild\\Timoa-1.1.0\\preview-20261017\\Timoa.exe"
+}

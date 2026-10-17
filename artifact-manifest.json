@@ -1,41 +1,34 @@
 {
   "name": "Timoa",
-  "version": "1.1.0",
-  "date": "2026-10-16",
-  "platform": "Windows 10/11 x64",
-  "runtime": "Rust 1.99.0, statically linked Windows GNU CRT",
-  "ui": "Slint 1.18.1, winit/FemtoVG with software fallback",
+  "version": "1.1.5",
+  "date": "2026-10-17",
+  "repository": "https://github.com/mofan6/Timoa",
+  "release": "https://github.com/mofan6/Timoa/releases/tag/v1.1.5",
   "languages": [
     "简体中文",
     "繁體中文",
     "English"
   ],
-  "defaultLanguage": "简体中文",
-  "defaultFeatures": {
-    "singleFocus": false,
-    "stopwatch": false
-  },
+  "runtime": "Statically linked; no separately installed language runtime required",
+  "packer": "UPX 5.1.0, icons and relocations preserved",
+  "inspection": "Release compilation, static PE architecture/import inspection and installer payload comparison.",
+  "windows7RuntimeVerified": false,
+  "functionalTestsPerformedThisPackaging": false,
+  "platform": "Windows 10/11 x64",
   "artifacts": [
     {
       "file": "Timoa.exe",
-      "bytes": 9051648,
-      "sha256": "4FE59A4D37F31D802A4623CC7A66D795E8DA6DF9D43DC6D25E5B690E3E47F180"
+      "variant": "normal",
+      "architecture": "x64",
+      "bytes": 10873344,
+      "sha256": "9981322D2F1208AA79AF22F782B3AB7518D473B061AC2E6DE78E2FFF7D3BF66D"
     },
     {
       "file": "Timoa-Setup.exe",
-      "bytes": 9356337,
-      "sha256": "B10451F1E8623E3CB54CA9610F260E4A02F7EC0A5E00D1838E3385B92822EFB5"
+      "variant": "normal",
+      "architecture": "x64",
+      "bytes": 11178059,
+      "sha256": "FABE08C88E46C1CACDB0D6C87BBAC74BEF05EFADDAB66A2A24D492D5098BDBB7"
     }
-  ],
-  "review": [
-    "13 windowless engine logic checks passed.",
-    "UI translations, native resize handling and theme bindings reviewed in source.",
-    "Final interface changes reviewed and approved by the user before packaging."
-  ],
-  "interactionTests": "No automated window, installation, uninstallation or Windows startup verification performed.",
-  "stage": "Release v1.1.0",
-  "packer": "Official UPX 5.1.0, icons and relocations preserved",
-  "installer": "NSIS 11-Oct-2026.cvs bundled with w64devkit 2.10.1; Modern UI 2, zlib",
-  "repository": "https://github.com/mofan6/Timoa",
-  "release": "https://github.com/mofan6/Timoa/releases/tag/v1.1.0"
+  ]
 }

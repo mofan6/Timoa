@@ -415,6 +415,14 @@
     "輕柔鈴聲",
     "Soft chime"
   ],
+  "花火大会": [
+    "花火大會",
+    "Fireworks Festival"
+  ],
+  "黄昏之时": [
+    "黃昏之時",
+    "At Twilight"
+  ],
   "马林巴琴": [
     "馬林巴琴",
     "Marimba"
@@ -930,5 +938,77 @@
   " · 共 {} 项提醒": [
     " · 共 {} 項提醒",
     " · {} reminders in total"
+  ],
+  "结束": [
+    "結束",
+    "Ends"
+  ],
+  "下一轮": [
+    "下一輪",
+    "Next round"
+  ],
+  "自动循环倒计时": [
+    "自動循環倒計時",
+    "Loop countdowns"
+  ],
+  "循环间隔": [
+    "循環間隔",
+    "Loop interval"
+  ],
+  "00:00 时，1 秒后关闭提醒并开始下一轮。": [
+    "00:00 時，1 秒後關閉提醒並開始下一輪。",
+    "At 00:00, close the reminder and restart after 1 second."
+  ],
+  "滑动选择时长": [
+    "滑動選擇時長",
+    "Scroll to set duration"
+  ],
+  "下一轮快捷时长": [
+    "下一輪快捷時長",
+    "Next round presets"
+  ],
+  "我知道了": [
+    "我知道了",
+    "Got it"
+  ],
+  "每日专注": [
+    "每日專注",
+    "Daily focus"
+  ],
+  "24 小时分布": [
+    "24 小時分布",
+    "Focus by hour"
+  ],
+  "单位：分钟": [
+    "單位：分鐘",
+    "Minutes"
+  ],
+  "轮完成": [
+    "輪完成",
+    "rounds completed"
+  ],
+  "完成一轮专注后，就会留下记录。": [
+    "完成一輪專注後，就會留下記錄。",
+    "Finish a focus round to see your record here."
+  ],
+  "最专注的时段": [
+    "最專注的時段",
+    "Most focused hour"
+  ],
+  "打开后，首页只留下一个大计时器。开始、暂停、继续都在这里操作，下面的计时列表会收起来。": [
+    "開啟後，首頁只留下一個大計時器。開始、暫停、繼續都在這裡操作，下方的計時清單會收起來。",
+    "Keep one large timer on the home page. Start, pause and resume here; the timer list below is hidden."
+  ],
+  "打开后，这一轮结束就会自动再来一轮，时长不变。想停下来，可以点暂停、移除，或者关掉这个开关。": [
+    "開啟後，這一輪結束就會自動再來一輪，時長不變。想停下來，可以點暫停、移除，或關掉這個開關。",
+    "Automatically start another round of the same length when this one ends. To stop, pause or remove the timer, or turn this off."
+  ],
+  "这是两轮之间休息多久。比如 00:03，就是等 3 秒再开始。最多 60 分钟；设成 00:00 也会等 1 秒，并关掉上一轮提醒。": [
+    "這是兩輪之間休息多久。例如 00:03，就是等 3 秒再開始。最多 60 分鐘；設成 00:00 也會等 1 秒，並關掉上一輪提醒。",
+    "Choose the break between rounds. 00:03 means wait 3 seconds, up to 60 minutes. 00:00 still waits 1 second. The previous reminder closes when the next round starts."
+  ],
+  "把这三个时间设成你常用的时长。倒计时结束后，点提醒窗口里的一个，就会按这个时长开始新一轮；“再来一轮”则沿用上一轮时长。": [
+    "把這三個時間設成你常用的時長。倒數計時結束後，點提醒視窗裡的一個，就會按這個時長開始新一輪；「再來一輪」則沿用上一輪時長。",
+    "Set three lengths you use often. When a countdown ends, pick one in the reminder to start a new round of that length. Another round repeats the previous length."
   ]
 }

@@ -14,6 +14,7 @@ fn main() {
         std::fs::write(directory.join("timoa.po"), po).unwrap();
     }
     println!("cargo:rerun-if-changed=i18n/messages.json");
+    println!("cargo:rerun-if-changed=app.manifest");
     slint_build::compile_with_config("ui/app.slint", slint_build::CompilerConfiguration::new()
         .with_style("fluent-dark".into())
         .with_default_translation_context(slint_build::DefaultTranslationContext::None)

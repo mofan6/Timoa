@@ -7,15 +7,19 @@
 
 ## Download
 
-**Windows 10 / 11, x64.** No separate .NET, VC++, Java or WebView2 runtime installation is required.
+**Windows 10/11 x64, Windows 7 SP1+ x64, and Windows 7 SP1+ x86.** No separate .NET, VC++, Java or WebView2 runtime installation is required.
 
-This source is version **1.1.0**. See [release notes](RELEASE-NOTES.md).
+Current version: **1.1.5**. See [release notes](RELEASE-NOTES.md).
 
-- [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa.exe): portable single EXE, **8.63 MiB**.
-- [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa-Setup.exe): per-user installer, **8.92 MiB**.
-- [Complete source archive](https://github.com/mofan6/Timoa/releases/download/v1.1.0/Timoa-1.1.0-source.zip), including third-party notices and the corresponding source for the audio decoder.
+| System | Portable EXE | Installer |
+| --- | --- | --- |
+| Windows 10 / 11 · x64 | [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa.exe) | [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-Setup.exe) |
+| Windows 7 SP1+ · x64 | [Win7-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x64.exe) | [Win7-x64-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x64-Setup.exe) |
+| Windows 7 SP1+ · x86 | [Win7-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x86.exe) | [Win7-x86-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x86-Setup.exe) |
 
-Publicly released versions are available from [GitHub Releases](https://github.com/mofan6/Timoa/releases).
+The [complete source archive](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-source.zip) contains separate normal and Windows 7 source trees, licenses and corresponding audio-decoder source. Compatibility development is also maintained in the [windows7 branch](https://github.com/mofan6/Timoa/tree/windows7).
+
+Windows 7 packages have been compiled and statically inspected, but have not been run on Windows 7 hardware or a VM. The x86 build requires SSE2. Earlier releases remain available from [GitHub Releases](https://github.com/mofan6/Timoa/releases).
 
 Keep the portable EXE in a permanent location before enabling startup at sign-in. Re-enable startup if you move it.
 
@@ -26,9 +30,11 @@ Keep the portable EXE in a permanent location before enabling startup at sign-in
 - Optional Single focus and Stopwatch modes, both off by default. Starting or resuming either stopwatch or countdown pauses the other and preserves progress.
 - A resizable, always-on-top mini window showing the active timer and alarms due within 30 minutes.
 - One-time and recurring alarms, weekday/weekend/custom schedules, end times and optional five-minute warnings.
-- Six built-in chimes and multiple custom sounds with individual preview and removal. Import common unencrypted MP3, FLAC, M4A, OGG, WAV and other audio files with offline conversion.
-- Total completed focus time that remains counted after completed records are removed.
+- Eight built-in sounds, including Fireworks Festival and At Twilight with 0.8-second fade-ins and fade-outs, and multiple custom sounds with individual preview and removal. Import common unencrypted MP3, FLAC, M4A, OGG, WAV and other audio files with offline conversion.
+- Automatic countdown loops with adjustable breaks and three customizable next-round presets. Expected finish time is shown in countdown cards and the mini window.
+- Daily completed focus duration, rounds and hourly charts with a fixed 60-minute scale, plus persistent lifetime totals. Paused time is excluded.
 - Dark/light themes and three embedded languages: Simplified Chinese, Traditional Chinese and English. Simplified Chinese is the default.
+- Focus-page shortcuts: tap `M` three times within one second to start, resume or begin another round; press `N` to pause.
 - System tray, `Ctrl + Alt + T`, optional startup at sign-in, and JSON backup/restore.
 
 Closing the window keeps timers running in the tray. Use the tray menu to exit the application.
@@ -58,8 +64,8 @@ Windows countdown timer, alarm clock, desktop timer, focus timer, study timer, e
 
 ## Acknowledgements
 
-Thank you to [@malinfossum](https://github.com/malinfossum) and [Tidsro](https://github.com/malinfossum/tidsro) for the initial inspiration and the built-in chimes.
+Thank you to [@malinfossum](https://github.com/malinfossum) and [Tidsro](https://github.com/malinfossum/tidsro) for the initial inspiration and the six original chimes.
 
-感谢 [@malinfossum](https://github.com/malinfossum) 的 Tidsro 项目，提供了 Timoa 最初的灵感与内置铃声。
+感谢 [@malinfossum](https://github.com/malinfossum) 的 Tidsro 项目，提供了 Timoa 最初的灵感与六段基础铃声。
 
 <p align="center">Designed By MOTAN</p>

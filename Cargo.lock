@@ -3905,6 +3905,7 @@ checksum = "15e477d5ff6fec20909100ff8f7062432ebfbda7a62a0f37d0252aa126f38c83"
 dependencies = [
  "const-field-offset",
  "i-slint-backend-selector",
+ "i-slint-backend-winit",
  "i-slint-common",
  "i-slint-core",
  "i-slint-core-macros",
@@ -4265,7 +4266,7 @@ dependencies = [
 
 [[package]]
 name = "timoa"
-version = "1.1.0"
+version = "1.1.5"
 dependencies = [
  "chrono",
  "flate2",

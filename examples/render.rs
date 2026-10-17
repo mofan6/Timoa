@@ -57,7 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         CustomSoundRow { id:8, name:"轻柔雨声.mp3".into(), available:true, menu_index:8 },
         CustomSoundRow { id:9, name:"计划提醒.m4a".into(), available:false, menu_index:9 },
     ])));
-    ui.set_timers(ModelRc::new(VecModel::from(vec![TimerRow { id:"a".into(), label:"英语阅读 · 第二篇".into(), remaining:"18:42".into(), status:i18n::t("进行中").into(), progress:0.252, paused:false, finished:false }])));
+    ui.set_timers(ModelRc::new(VecModel::from(vec![TimerRow { id:"a".into(), label:"英语阅读 · 第二篇".into(), remaining:"18:42".into(), status:i18n::t("进行中").into(), progress:0.252, paused:false, finished:false, waiting:false }])));
     let alarms = || ModelRc::new(VecModel::from(vec![AlarmRow { id:"b".into(), label:"数学真题 · 计时训练".into(), time:"14:00".into(), detail:format!("{}{}{}",i18n::t("工作日"),i18n::message(" · 至 16:00"),i18n::t(" · 提前提醒")).into(), meta:i18n::t("重复").into(), enabled:true }, AlarmRow { id:"c".into(), label:"英语复盘".into(), time:"19:30".into(), detail:i18n::t("每天").into(), meta:i18n::t("重复").into(), enabled:false } ]));
     ui.set_alarms(alarms()); ui.set_week_items(alarms()); ui.set_week_day(3);
     ui.set_week_title(if language == 2 { "Oct 12 — Oct 18".into() } else { "10月12日 — 10月18日".into() });

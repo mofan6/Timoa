@@ -4,6 +4,8 @@ mod data;
 mod engine;
 mod native;
 mod i18n;
+mod shortcuts;
+mod stats;
 
 use chrono::{Datelike, Local, NaiveDate, TimeZone, Timelike};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
@@ -29,6 +31,7 @@ struct App {
     alarm_rows: Rc<VecModel<AlarmRow>>,
     day_rows: Rc<VecModel<DayRow>>,
     week_rows: Rc<VecModel<AlarmRow>>,
+    focus_bars: Rc<VecModel<FocusBar>>,
     week_offset: i64,
     week_day: i32,
     editor: Option<Editor>,
@@ -36,6 +39,7 @@ struct App {
     about: Option<AboutWindow>,
     alerts: VecDeque<Alert>,
     alert: Option<(AlertWindow, Alert)>,
+    sound_owner: Option<String>,
     quit_pending: bool,
     import_notice: String,
     preview_index: i32,
@@ -47,6 +51,23 @@ struct App {
 fn clock_duration(ms: u64, round_up: bool) -> String {
     let seconds = if round_up { ms.div_ceil(1000) } else { ms / 1000 };
     format!("{:02}:{:02}:{:02}", seconds / 3600, seconds / 60 % 60, seconds % 60)
+}
+
+fn delay_label(seconds: u64) -> String {
+    if seconds.is_multiple_of(60) { format!("{} {}", seconds / 60, i18n::t("分钟")) }
+    else if seconds < 60 { format!("{} {}", seconds, i18n::t("秒")) }
+    else { format!("{:02}:{:02}", seconds / 60, seconds % 60) }
+}
+fn finish_label(engine: &Engine, timer: &data::Countdown) -> String {
+    if let Some(wait) = engine.cycle_remaining(&timer.id) {
+        return format!("{} · {}", i18n::t("下一轮"), data::format_duration(wait));
+    }
+    if timer.finished { return i18n::t("已完成").into(); }
+    if timer.paused { return i18n::t("已暂停").into(); }
+    let end = Local::now() + chrono::Duration::milliseconds(engine.remaining(timer).min(360_000_000) as i64);
+    let clock = if end.date_naive() == Local::now().date_naive() { end.format("%H:%M").to_string() }
+        else { format!("{} {}", i18n::date(end.date_naive()), end.format("%H:%M")) };
+    if i18n::language() == 2 { format!("{} {}", i18n::t("结束"), clock) } else { format!("{} {}", clock, i18n::t("结束")) }
 }
 
 fn sync_model<T: Clone + PartialEq + 'static>(model: &VecModel<T>, rows: Vec<T>) {
@@ -142,6 +163,19 @@ impl App {
         }
         self.restore_focus_draft();
     }
+    fn start_countdown(&mut self) {
+        if self.engine.doc.settings.single_focus && self.engine.focus_timer().is_some() { return; }
+        if let Some(ui) = self.ui.upgrade() {
+            let duration = ui.get_draft_hour().max(0) as u64 * 3600 + ui.get_draft_minute().max(0) as u64 * 60 + ui.get_draft_second().max(0) as u64;
+            let selected_sound = self.sound_choice(ui.get_draft_sound());
+            if !self.sound_exists(selected_sound) { self.engine.message = i18n::t("请先在设置中导入自定义提示音。").into(); }
+            else { match self.engine.start(duration, ui.get_draft_label().as_str(), selected_sound) {
+                Ok(()) => { self.engine.message.clear(); self.commit(); }
+                Err(error) => self.engine.message = error,
+            } }
+            self.refresh();
+        }
+    }
     fn restore_focus_draft(&self) {
         if let Some(ui) = self.ui.upgrade() {
             let seconds = self.engine.doc.settings.focus_duration_seconds;
@@ -162,7 +196,11 @@ impl App {
         match self.player.play(index, &folders) {
             Ok(()) => {
                 self.preview_index = index;
-                self.preview_deadline = Some(Instant::now() + self.player.duration().min(Duration::from_secs(5)));
+                let duration = self.player.duration();
+                let preview_duration = if data::builtin_sound_index(index).is_some_and(|slot| slot >= 7) {
+                    duration // Play the new short music tracks through their fade-out.
+                } else { duration.min(Duration::from_secs(5)) };
+                self.preview_deadline = Some(Instant::now() + preview_duration);
                 if let Some(ui) = self.ui.upgrade() { ui.set_preview_index(self.sound_index(index)); }
             }
             Err(error) => { self.engine.message = error; self.refresh(); }
@@ -183,12 +221,14 @@ impl App {
             self.engine.message = i18n::t("未能保存数据，请检查磁盘空间与文件夹权限。").into();
         }
     }
-    fn sound_ids(&self) -> Vec<i32> { (0..7).chain(self.engine.doc.settings.custom_sounds.iter().map(|s| s.id)).collect() }
+    fn sound_ids(&self) -> Vec<i32> { data::BUILTIN_SOUNDS.iter().map(|(id, _)| *id)
+        .chain(self.engine.doc.settings.custom_sounds.iter().map(|s| s.id)).collect() }
     fn sound_choice(&self, index: i32) -> i32 { self.sound_ids().get(index.max(0) as usize).copied().unwrap_or(0) }
     fn sound_index(&self, id: i32) -> i32 { self.sound_ids().iter().position(|v| *v == id).unwrap_or(0) as i32 }
-    fn sound_exists(&self, id: i32) -> bool { (0..7).contains(&id) || self.engine.doc.settings.custom_sounds.iter().any(|s| s.id == id) && self.folders.custom_sound(id).is_file() }
+    fn sound_exists(&self, id: i32) -> bool { data::builtin_sound_index(id).is_some()
+        || self.engine.doc.settings.custom_sounds.iter().any(|s| s.id == id) && self.folders.custom_sound(id).is_file() }
     fn sounds(&self) -> ModelRc<SharedString> {
-        let mut sounds: Vec<SharedString> = audio::NAMES[..7].iter().map(|s| i18n::t(s).into()).collect();
+        let mut sounds: Vec<SharedString> = data::BUILTIN_SOUNDS.iter().map(|(_, name)| i18n::t(name).into()).collect();
         sounds.extend(self.engine.doc.settings.custom_sounds.iter().map(|s| s.name.clone().into()));
         ModelRc::new(VecModel::from(sounds))
     }
@@ -197,7 +237,7 @@ impl App {
         ui.set_sounds(self.sounds());
         ui.set_sound_available(ModelRc::new(VecModel::from(self.sound_ids().iter().map(|id| self.sound_exists(*id)).collect::<Vec<_>>())));
         ui.set_custom_sounds(ModelRc::new(VecModel::from(self.engine.doc.settings.custom_sounds.iter().enumerate().map(|(i,s)| CustomSoundRow {
-            id: s.id, name: s.name.clone().into(), available: self.sound_exists(s.id), menu_index: (i+7) as i32,
+            id: s.id, name: s.name.clone().into(), available: self.sound_exists(s.id), menu_index: (i + data::BUILTIN_SOUNDS.len()) as i32,
         }).collect::<Vec<_>>())));
     }
     fn refresh(&mut self) {
@@ -214,6 +254,12 @@ impl App {
         ui.set_window_maximized(native::maximized(ui.window()));
         ui.set_single_focus(self.engine.doc.settings.single_focus);
         ui.set_stopwatch_enabled(self.engine.doc.settings.stopwatch_enabled);
+        ui.set_auto_cycle(self.engine.doc.settings.auto_cycle);
+        ui.set_cycle_interval(self.engine.doc.settings.cycle_interval_seconds as i32);
+        ui.set_quick_snooze_1(self.engine.doc.settings.quick_snooze_seconds[0] as i32);
+        ui.set_quick_snooze_2(self.engine.doc.settings.quick_snooze_seconds[1] as i32);
+        ui.set_quick_snooze_3(self.engine.doc.settings.quick_snooze_seconds[2] as i32);
+        self.refresh_alert_options();
         let stopwatch_ms = self.engine.stopwatch_elapsed();
         ui.set_stopwatch_time(clock_duration(stopwatch_ms, false).into());
         ui.set_stopwatch_running(self.engine.doc.stopwatch.running);
@@ -223,10 +269,13 @@ impl App {
         if let Some(timer) = timer {
             let remaining = self.engine.remaining(timer);
             ui.set_focus_id(timer.id.clone().into()); ui.set_focus_time(clock_duration(remaining, true).into());
+            ui.set_focus_end_label(finish_label(&self.engine, timer).into());
+            ui.set_focus_waiting(self.engine.cycle_remaining(&timer.id).is_some());
             ui.set_focus_status(i18n::t(if timer.finished { "已完成" } else if timer.paused { "已暂停" } else { "进行中" }).into());
             ui.set_focus_progress((1. - remaining as f64 / timer.original_ms.max(1) as f64).clamp(0., 1.) as f32);
             ui.set_focus_paused(timer.paused); ui.set_focus_finished(timer.finished);
         } else {
+            ui.set_focus_waiting(false); ui.set_focus_end_label("".into());
             ui.set_focus_id("".into()); ui.set_focus_progress(0.); ui.set_focus_paused(false); ui.set_focus_finished(false);
         }
         let mini_timer = timer.or_else(|| if self.engine.doc.settings.single_focus { None } else {
@@ -237,18 +286,19 @@ impl App {
         self.mini.set_is_stopwatch(mini_stopwatch);
         if mini_stopwatch {
             self.mini.set_focus_time(clock_duration(stopwatch_ms, false).into());
-            self.mini.set_focus_label(i18n::t("正计时").into());
+            self.mini.set_focus_label(i18n::t("正计时").into()); self.mini.set_finish_label("".into());
             self.mini.set_focus_status(i18n::t(if self.engine.doc.stopwatch.running { "进行中" } else if stopwatch_ms > 0 { "已暂停" } else { "尚未开始" }).into());
             self.mini.set_progress(0.);
         } else if let Some(timer) = mini_timer {
             let remaining = self.engine.remaining(timer);
             self.mini.set_focus_time(clock_duration(remaining, true).into());
+            self.mini.set_finish_label(if !timer.finished && !timer.paused { finish_label(&self.engine, timer).into() } else { "".into() });
             self.mini.set_focus_label(if timer.label.is_empty() { i18n::t("专注计时").into() } else { timer.label.clone().into() });
             self.mini.set_focus_status(i18n::t(if timer.finished { "已完成" } else if timer.paused { "已暂停" } else { "进行中" }).into());
             self.mini.set_progress((1. - remaining as f64 / timer.original_ms.max(1) as f64).clamp(0., 1.) as f32);
         } else {
             self.mini.set_focus_time(clock_duration(self.engine.doc.settings.focus_duration_seconds * 1000, true).into());
-            self.mini.set_focus_label(i18n::t("专注计时").into());
+            self.mini.set_focus_label(i18n::t("专注计时").into()); self.mini.set_finish_label("".into());
             self.mini.set_focus_status(i18n::t("尚未开始").into()); self.mini.set_progress(0.);
         }
         let upcoming = self.engine.upcoming_alarms(now.timestamp(), 1800);
@@ -266,9 +316,9 @@ impl App {
         let rows = self.engine.doc.countdowns.iter().map(|timer| {
             let remaining = self.engine.remaining(timer);
             TimerRow { id: timer.id.clone().into(), label: if timer.label.is_empty() { i18n::t("专注计时").into() } else { timer.label.clone().into() },
-                remaining: data::format_duration(remaining).into(), status: if timer.finished { i18n::t("已完成").into() } else if timer.paused { i18n::t("已暂停").into() } else { i18n::t("进行中").into() },
+                remaining: data::format_duration(remaining).into(), status: finish_label(&self.engine, timer).into(),
                 progress: (1. - remaining as f64 / timer.original_ms.max(1) as f64).clamp(0., 1.) as f32,
-                paused: timer.paused, finished: timer.finished }
+                paused: timer.paused, finished: timer.finished, waiting: self.engine.cycle_remaining(&timer.id).is_some() }
         }).collect();
         sync_model(&self.timer_rows, rows);
         let mut alarms = self.engine.doc.alarms.clone();
@@ -313,6 +363,26 @@ impl App {
         }).collect();
         sync_model(&self.day_rows, days);
         sync_model(&self.week_rows, week_items(self.week_day.clamp(0, 6) as usize));
+        let selected_date = monday + chrono::Duration::days(self.week_day.clamp(0, 6) as i64);
+        let key = selected_date.format("%Y-%m-%d").to_string();
+        let day = self.engine.doc.focus_days.iter().find(|day| day.date == key);
+        let hours = day.map(|day| day.hours_ms).unwrap_or([0; 24]);
+        let total = hours.iter().fold(0u64, |total, value| total.saturating_add(*value));
+        let peak = hours.iter().copied().max().unwrap_or(0);
+        let peak_hour = hours.iter().position(|value| *value == peak).unwrap_or(0);
+        ui.set_stats_date(format!("{} · {}", i18n::date(selected_date), i18n::weekday(self.week_day.clamp(0, 6) as usize)).into());
+        ui.set_stats_total(clock_duration(total, false).into());
+        ui.set_stats_rounds(format!("{} {}", day.map(|day| day.rounds).unwrap_or(0), i18n::t("轮完成")).into());
+        ui.set_stats_has_data(total > 0);
+        ui.set_stats_peak(if total == 0 { i18n::t("完成一轮专注后，就会留下记录。").into() }
+            else { format!("{}  {:02}:00–{:02}:00", i18n::t("最专注的时段"), peak_hour, peak_hour + 1).into() });
+        let bars = (0..24).map(|hour| FocusBar {
+            // A fixed one-hour scale makes dates and hours directly comparable.
+            amount: (hours[hour] as f64 / 3_600_000.).clamp(0., 1.) as f32,
+            over_limit: hours[hour] > 3_600_000,
+            detail: format!("{:02}:00–{:02}:00  ·  {}", hour, hour + 1, data::format_duration(hours[hour])).into(),
+        }).collect::<Vec<_>>();
+        sync_model(&self.focus_bars, bars);
         ui.set_default_sound(self.sound_index(self.engine.doc.settings.default_sound));
         let has_custom = self.folders.custom().is_file();
         ui.set_has_custom(has_custom);
@@ -322,14 +392,53 @@ impl App {
         ui.set_import_busy(self.import.is_some());
         if let Some(job) = &self.import { ui.set_import_progress(job.started.elapsed().as_secs_f32().fract()); }
     }
+    fn refresh_alert_options(&self) {
+        if let Some((ui, _)) = &self.alert {
+            let labels = self.engine.doc.settings.quick_snooze_seconds.iter()
+                .map(|seconds| format!("+ {}", delay_label(*seconds)).into()).collect::<Vec<SharedString>>();
+            let current = ui.get_quick_labels();
+            // Keep pressed/hovered buttons alive across the periodic clock refresh.
+            if current.row_count() != labels.len() || labels.iter().enumerate()
+                .any(|(index, label)| current.row_data(index).as_ref() != Some(label)) {
+                ui.set_quick_labels(ModelRc::new(VecModel::from(labels)));
+            }
+        }
+    }
+    fn receive_alerts(&mut self, alerts: Vec<Alert>) {
+        // Sound is dispatched when a reminder becomes due, independently of the window queue.
+        for alert in alerts {
+            if alert.sound > 0 {
+                self.stop_preview();
+                let folders = self.folders.clone();
+                if let Err(error) = self.player.play(alert.sound, &folders) { self.folders.log(&error); }
+                self.sound_owner = Some(alert.token.clone());
+            }
+            self.alerts.push_back(alert);
+        }
+    }
     fn close_alert(&mut self) {
-        self.player.stop();
-        if let Some((ui, _)) = self.alert.take() { let _ = ui.hide(); }
+        if let Some((ui, alert)) = self.alert.take() {
+            // Dismissing an older window must not stop the sound of a newer reminder.
+            if self.sound_owner.as_deref() == Some(alert.token.as_str()) {
+                self.player.stop(); self.sound_owner = None;
+            }
+            let _ = ui.hide();
+        }
+    }
+    fn clear_alerts(&mut self) {
+        self.close_alert(); self.alerts.clear(); self.player.stop(); self.sound_owner = None;
+    }
+    fn discard_cycle_alerts(&mut self, id: &str) {
+        let sounding = self.alerts.iter().chain(self.alert.as_ref().map(|(_, alert)| alert))
+            .any(|alert| alert.countdown && alert.id == id && self.sound_owner.as_deref() == Some(alert.token.as_str()));
+        if sounding { self.player.stop(); self.sound_owner = None; }
+        self.alerts.retain(|alert| !alert.countdown || alert.id != id);
+        if self.alert.as_ref().is_some_and(|(_, alert)| alert.countdown && alert.id == id) { self.close_alert(); }
     }
     fn request_quit(&mut self) {
         self.commit();
         if let Some(job) = &self.import { job.cancel.store(true, Ordering::Relaxed); self.quit_pending = true; }
-        else { self.close_alert(); let _ = slint::quit_event_loop(); }
+        else { self.clear_alerts(); let _ = slint::quit_event_loop(); }
     }
 }
 
@@ -366,18 +475,9 @@ fn present_alert(controller: &Controller) {
     let weak = Rc::downgrade(controller);
     ui.on_dismiss(move || { if let Some(app) = weak.upgrade() { app.borrow_mut().close_alert(); present_alert(&app); } });
     let weak = Rc::downgrade(controller);
-    ui.on_snooze(move || { if let Some(app) = weak.upgrade() {
-        let mut state = app.borrow_mut();
-        if let Some((_, alert)) = &state.alert {
-            let alert = alert.clone();
-            if alert.countdown { let _ = state.engine.start(300, &alert.label, alert.sound); }
-            else {
-                let when = Local::now() + chrono::Duration::minutes(5);
-                state.engine.put_alarm(Alarm { id: data::new_id(), label: alert.label, hour: when.hour(), minute: when.minute(),
-                    days: 0, end_minute: None, fire_at: when.timestamp(), sound: alert.sound, warn_before: false, enabled: true });
-            }
-        }
-        state.close_alert(); state.commit(); state.refresh(); drop(state); present_alert(&app);
+    ui.on_quick_round(move |index| { if let Some(app) = weak.upgrade() {
+        let seconds = app.borrow().engine.doc.settings.quick_snooze_seconds.get(index.max(0) as usize).copied();
+        if let Some(seconds) = seconds { start_quick_round(&app, seconds); }
     } });
     let weak = Rc::downgrade(controller);
     ui.on_restart(move || { if let Some(app) = weak.upgrade() {
@@ -396,10 +496,27 @@ fn present_alert(controller: &Controller) {
         show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|p| p.window()) }, state.engine.doc.settings.theme == 0);
     }
     {
-        let mut app = controller.borrow_mut(); let folders = app.folders.clone();
-        if let Err(error) = app.player.play(alert.sound, &folders) { app.folders.log(&error); }
-        app.alert = Some((ui, alert));
+        let mut app = controller.borrow_mut();
+        app.alert = Some((ui, alert)); app.refresh_alert_options();
     }
+}
+
+fn start_quick_round(controller: &Controller, seconds: u64) {
+    let mut state = controller.borrow_mut();
+    let Some((_, alert)) = &state.alert else { return; };
+    let alert = alert.clone();
+    let seconds = seconds.clamp(1, 5999);
+    if alert.countdown {
+        state.engine.cancel_cycle(&alert.id);
+        if let Err(error) = state.engine.start(seconds, if alert.default_label { "" } else { &alert.label }, alert.sound) {
+            state.engine.message = error; state.refresh(); return;
+        }
+    } else {
+        let when = Local::now() + chrono::Duration::seconds(seconds as i64);
+        state.engine.put_alarm(Alarm { id: data::new_id(), label: alert.label, hour: when.hour(), minute: when.minute(),
+            days: 0, end_minute: None, fire_at: when.timestamp(), sound: alert.sound, warn_before: false, enabled: true });
+    }
+    state.close_alert(); state.commit(); state.refresh(); drop(state); present_alert(controller);
 }
 
 fn open_editor(controller: &Controller, id: Option<String>) {
@@ -494,7 +611,7 @@ fn confirm(controller: &Controller, action: Confirmation) {
                 if let Err(error) = data::save(&state.folders, &replacement.snapshot()) {
                     state.engine.message = format!("导入失败，当前计划未更改：{error}"); state.refresh(); return;
                 }
-                state.stop_preview(); state.close_alert(); state.alerts.clear();
+                state.stop_preview(); state.clear_alerts();
                 state.engine = replacement; imported = true;
                 state.restore_focus_draft();
                 state.relocalize();
@@ -509,14 +626,15 @@ fn confirm(controller: &Controller, action: Confirmation) {
             }
             Confirmation::Clear => {
                 let mut settings = state.engine.doc.settings.clone(); settings.focus_timer_id.clear();
-                state.close_alert(); state.alerts.clear();
-                state.engine = Engine::new(Document { settings, total_focus_ms: state.engine.doc.total_focus_ms, focus_stats_initialized: true, ..Document::default() }, i18n::t("已清除全部计划。").into());
+                state.clear_alerts();
+                state.engine = Engine::new(Document { settings, total_focus_ms: state.engine.doc.total_focus_ms, focus_days: state.engine.doc.focus_days.clone(), focus_stats_initialized: true, ..Document::default() }, i18n::t("已清除全部计划。").into());
             }
             Confirmation::Reset => {
                 if let Err(error) = native::startup(false) { state.engine.message = error; state.refresh(); return; }
                 let custom_name = state.engine.doc.settings.custom_name.clone();
                 let custom_sounds = state.engine.doc.settings.custom_sounds.clone();
                 if state.engine.doc.stopwatch.running { state.engine.stopwatch_action("toggle"); }
+                state.engine.set_auto_cycle(false);
                 state.engine.doc.settings = data::Settings { custom_name, custom_sounds, ..data::Settings::default() };
                 state.restore_focus_draft();
                 i18n::select(0); state.apply_theme();
@@ -545,7 +663,7 @@ fn choose_audio(controller: &Controller) {
         let mut app = controller.borrow_mut();
         if app.engine.doc.settings.custom_sounds.len() >= 1000 { app.import_notice = i18n::t("最多保留 1000 段自定义提示音。").into(); app.refresh(); return; }
         let mut id = app.engine.doc.settings.custom_sounds.iter().map(|s| s.id).max().unwrap_or(7).saturating_add(1);
-        while id < i32::MAX && app.folders.custom_sound(id).exists() { id += 1; }
+        while id < i32::MAX && (data::builtin_sound_index(id).is_some() || app.folders.custom_sound(id).exists()) { id += 1; }
         if id == i32::MAX { return; }
         app.import = Some(audio::start_import(source, app.folders.clone(), id));
         app.import_notice.clear();
@@ -620,7 +738,7 @@ fn bind(controller: &Controller, ui: &MainWindow) {
         let mut app = app.borrow_mut(); app.engine.doc.settings.selected_tab = index;
         if index == 0 { app.engine.doc.settings.active_focus_mode = 0; }
         if index == 4 && app.engine.doc.settings.stopwatch_enabled { app.engine.doc.settings.active_focus_mode = 1; }
-        if let Some(ui) = app.ui.upgrade() { ui.set_hint_visible(false); }
+        if let Some(ui) = app.ui.upgrade() { ui.set_hint_visible(false); ui.set_focus_shortcuts_editing(false); }
         app.commit(); app.refresh();
     });
     action!(on_clear_message, |app| { let mut app = app.borrow_mut(); app.engine.message.clear(); app.refresh(); });
@@ -652,19 +770,21 @@ fn bind(controller: &Controller, ui: &MainWindow) {
         if !app.engine.doc.settings.stopwatch_enabled { return; }
         app.engine.stopwatch_action(verb.as_str()); app.commit(); app.refresh();
     });
+    action!(on_change_quick_round, |app, index, seconds| {
+        let mut app = app.borrow_mut(); let seconds = seconds.clamp(1, 5999) as u64;
+        if (0..3).contains(&index) { app.engine.doc.settings.quick_snooze_seconds[index as usize] = seconds; }
+        app.commit(); app.refresh();
+    });
+    action!(on_change_auto_cycle, |app| {
+        let mut app = app.borrow_mut(); let enabled = !app.engine.doc.settings.auto_cycle;
+        app.engine.set_auto_cycle(enabled); app.commit(); app.refresh();
+    });
+    action!(on_change_cycle_interval, |app, seconds| {
+        let mut app = app.borrow_mut(); app.engine.doc.settings.cycle_interval_seconds = seconds.clamp(0, 3600) as u64;
+        app.commit(); app.refresh();
+    });
     action!(on_start_countdown, |app| {
-        let mut app = app.borrow_mut();
-        if app.engine.doc.settings.single_focus && app.engine.focus_timer().is_some() { return; }
-        if let Some(ui) = app.ui.upgrade() {
-            let duration = ui.get_draft_hour().max(0) as u64 * 3600 + ui.get_draft_minute().max(0) as u64 * 60 + ui.get_draft_second().max(0) as u64;
-            let selected_sound = app.sound_choice(ui.get_draft_sound());
-            if !app.sound_exists(selected_sound) { app.engine.message = i18n::t("请先在设置中导入自定义提示音。").into(); }
-            else { match app.engine.start(duration, ui.get_draft_label().as_str(), selected_sound) {
-                Ok(()) => { app.engine.message.clear(); app.commit(); }
-                Err(error) => app.engine.message = error,
-            } }
-            app.refresh();
-        }
+        app.borrow_mut().start_countdown();
     });
     action!(on_timer_action, |app, id, verb| {
         let mut app = app.borrow_mut();
@@ -728,7 +848,7 @@ fn bind(controller: &Controller, ui: &MainWindow) {
         app.refresh();
     });
     action!(on_choose_audio, |app| { choose_audio(&app); });
-    action!(on_preview_audio, |app| { app.borrow_mut().preview(7); });
+    action!(on_preview_audio, |app| { let mut app = app.borrow_mut(); let index = app.sound_index(7); app.preview(index); });
     action!(on_remove_sound, |app, id| {
         let mut app = app.borrow_mut();
         if app.import.is_some() || !app.engine.doc.settings.custom_sounds.iter().any(|s| s.id == id) { return; }
@@ -758,10 +878,11 @@ fn bind(controller: &Controller, ui: &MainWindow) {
     action!(on_about, |app| { about(&app); });
     action!(on_open_data, |app| { let folder = app.borrow().folders.roaming.clone(); let _ = fs::create_dir_all(&folder); native::open(&folder); });
     let hint_weak = ui.as_weak();
-    ui.on_info_hint(move |visible| {
+    ui.on_info_hint(move |kind, visible| {
         if let Some(ui) = hint_weak.upgrade() {
             let visible = visible && ui.get_page() == 3 && ui.get_more_settings_open();
             if visible {
+                ui.set_hint_kind(kind);
                 if let Some(position) = native::pointer_position(ui.window()) {
                     ui.set_hint_x(position.x); ui.set_hint_y(position.y);
                 }
@@ -819,15 +940,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     ui.set_page(document.settings.selected_tab);
     let timer_rows = Rc::new(VecModel::<TimerRow>::default()); let alarm_rows = Rc::new(VecModel::<AlarmRow>::default());
     let day_rows = Rc::new(VecModel::<DayRow>::default()); let week_rows = Rc::new(VecModel::<AlarmRow>::default());
+    let focus_bars = Rc::new(VecModel::<FocusBar>::default());
     ui.set_timers(timer_rows.clone().into()); ui.set_alarms(alarm_rows.clone().into());
     ui.set_week_days(day_rows.clone().into()); ui.set_week_items(week_rows.clone().into());
+    ui.set_focus_bars(focus_bars.clone().into());
     let app = Rc::new(RefCell::new(App { ui: ui.as_weak(), mini, compact: false, mini_positioned: false, engine: Engine::new(document, message), folders,
-        player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, week_offset: 0,
+        player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, focus_bars, week_offset: 0,
         week_day: Local::now().weekday().num_days_from_monday() as i32, editor: None, confirm: None, about: None,
-        alerts: VecDeque::new(), alert: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
+        alerts: VecDeque::new(), alert: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
         message_seen: String::new(), message_deadline: None }));
     app.borrow().restore_focus_draft();
     app.borrow().refresh_sound_library(); ui.set_draft_sound(app.borrow().sound_index(app.borrow().engine.doc.settings.default_sound)); bind(&app, &ui); app.borrow().apply_theme(); app.borrow_mut().refresh();
+    shortcuts::install(&app, &ui);
     // Persist migration to this profile only; the WPF profile remains readable by the previous version.
     app.borrow_mut().commit();
     let (native_sender, native_receiver) = mpsc::channel();
@@ -869,7 +993,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         if app.preview_deadline.is_some_and(|deadline| Instant::now() >= deadline) { app.stop_preview(); }
         if app.message_deadline.is_some_and(|deadline| Instant::now() >= deadline) { app.engine.message.clear(); app.refresh(); }
-        let (alerts, changed) = app.engine.tick(); app.alerts.extend(alerts);
+        let (alerts, changed) = app.engine.tick();
+        for id in app.engine.take_cycle_restarts() { app.discard_cycle_alerts(&id); }
+        app.receive_alerts(alerts);
         if changed { app.commit(); }
         let second = Local::now().timestamp();
         if second != last_second || changed {

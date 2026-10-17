@@ -21,11 +21,11 @@ ManifestDPIAware true
 Icon "..\assets\timoa.ico"
 UninstallIcon "..\assets\timoa.ico"
 BrandingText "Timoa"
-VIProductVersion "1.1.0.0"
+VIProductVersion "1.1.5.0"
 VIAddVersionKey "ProductName" "Timoa"
-VIAddVersionKey "ProductVersion" "1.1.0"
+VIAddVersionKey "ProductVersion" "1.1.5"
 VIAddVersionKey "FileDescription" "Timoa 安装程序"
-VIAddVersionKey "FileVersion" "1.1.0.0"
+VIAddVersionKey "FileVersion" "1.1.5.0"
 VIAddVersionKey "LegalCopyright" ""
 
 !define MUI_ABORTWARNING
@@ -97,7 +97,7 @@ Section "Timoa" Main
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\TIMO" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayName" "Timoa"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayVersion" "1.1.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayVersion" "1.1.5"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "Publisher" "MOTAN"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayIcon" "$INSTDIR\Timoa.exe"

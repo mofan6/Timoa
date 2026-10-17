@@ -1,4 +1,4 @@
-Timoa 1.1.0 / 2026-10-16
+Timoa 1.1.5 / 2026-10-17
 
 应用源码：Apache License 2.0（见 LICENSE）
 界面设计署名：Designed By MOTAN
