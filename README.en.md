@@ -16,7 +16,7 @@ Version **1.1.5**. One source tree provides x64 and x86 builds with the same fea
 
 Targets Windows 7 SP1, 8, 8.1, 10 and 11. x86 requires SSE2 and also runs through WOW64 on x64 Windows. Windows 11 has no x86 OS edition. No separate .NET, VC++, Java or WebView2 runtime installation is required.
 
-See [WINDOWS-SUPPORT.md](WINDOWS-SUPPORT.md) for actual verification coverage and runtime capability fallbacks. Systems that have not been run are not described as verified. The source ZIP contains one self-contained `Timoa/` tree for both architectures, licenses and corresponding decoder source. Earlier normal and Windows 7 source snapshots remain preserved.
+See [WINDOWS-SUPPORT.md](WINDOWS-SUPPORT.md) for actual verification coverage and runtime capability fallbacks. Systems that have not been run are not described as verified. The release page provides **Source code (zip)** and **Source code (tar.gz)** generated from its version tag, including the unified source tree for both architectures, licenses and corresponding decoder source. Earlier normal and Windows 7 source snapshots remain preserved.
 
 Keep the portable EXE in a permanent location before enabling startup. Exit an older instance from the tray before upgrading.
 
