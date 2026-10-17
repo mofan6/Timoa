@@ -1,17 +1,13 @@
 Timoa 1.1.5
 
-Windows 10 / 11 64 位：Timoa.exe、Timoa-Setup.exe。
-Windows 7 SP1+ 64 位：Timoa-1.1.5-Win7-x64.exe、Timoa-1.1.5-Win7-x64-Setup.exe。
-Windows 7 SP1+ 32 位：Timoa-1.1.5-Win7-x86.exe、Timoa-1.1.5-Win7-x86-Setup.exe，需要 SSE2。
+64 位：Timoa-1.1.5-windows-x64.exe / Timoa-1.1.5-windows-x64-setup.exe
+32 位：Timoa-1.1.5-windows-x86.exe / Timoa-1.1.5-windows-x86-setup.exe
 
-单 EXE 可直接运行；Setup 安装到当前用户目录，无需另装语言运行库。
-升级或切换版本前，请从右下角托盘退出旧版。三个版本共用数据目录和单实例标识。
-数据目录：%APPDATA%\TIMO。自定义音频在其中的 sounds 文件夹。
-JSON 备份包含计划、设置和专注统计，不包含自定义音频文件。
+目标系统：Windows 7 SP1、8、8.1、10、11。x86 需要 SSE2。
+单 EXE 直接运行，Setup 安装到当前用户目录，无需另装语言运行库。
+程序共用计时功能、界面和数据格式。新系统使用可用的新接口，旧系统按能力回退。
+升级前从托盘退出旧版。数据目录沿用 %APPDATA%\TIMO。
+JSON 备份不包含自定义音频文件。
 
-源码包包含 normal 与 windows7 两套独立源码。正常版源代码与 Win7 适配分别维护。
-Win7 包经过编译和静态 PE 检查，尚未在 Windows 7 真机或虚拟机上运行验证。
-
-项目：https://github.com/mofan6/Timoa
-感谢 @malinfossum / Tidsro 提供最初灵感与六段基础铃声。
+当前旧系统仅完成编译和静态检查；实际验证范围见源码 WINDOWS-SUPPORT.md。
 Designed By MOTAN

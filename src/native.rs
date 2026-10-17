@@ -1,8 +1,8 @@
 //! Small Windows boundary: tray, global shortcut, dark system frame and startup registration.
 use std::{ffi::OsStr, os::windows::ffi::OsStrExt, path::Path, sync::{OnceLock, mpsc::Sender}};
 use crate::i18n;
-use windows_sys::Win32::{Foundation::*, System::{LibraryLoader::GetModuleHandleW, Threading::*, Registry::*},
-    UI::{WindowsAndMessaging::*, Shell::*, Input::KeyboardAndMouse::*, HiDpi::*, Controls::MARGINS}, Graphics::{Dwm::*, Gdi::*}};
+use windows_sys::Win32::{Foundation::*, System::{LibraryLoader::{GetModuleHandleW, GetProcAddress}, Threading::*, Registry::*},
+    UI::{WindowsAndMessaging::*, Shell::*, Input::KeyboardAndMouse::*, Controls::MARGINS}, Graphics::{Dwm::*, Gdi::*}};
 
 pub enum Event { Show, Quit }
 static EVENTS: OnceLock<Sender<Event>> = OnceLock::new();
@@ -80,7 +80,10 @@ unsafe fn add_tray(hwnd: HWND) {
     }
 }
 fn put_tip(icon: &mut NOTIFYICONDATAW, message: &str) {
-    for (target, value) in icon.szTip.iter_mut().take(127).zip(message.encode_utf16()) { *target = value; }
+    // NOTIFYICONDATAW is packed on x86. Build the text in an aligned local array.
+    let mut tip = [0u16; 128];
+    for (target, value) in tip.iter_mut().take(127).zip(message.encode_utf16()) { *target = value; }
+    icon.szTip = tip;
 }
 impl Drop for Bridge {
     fn drop(&mut self) { unsafe {
@@ -137,12 +140,16 @@ pub fn theme_frame(window: &slint::Window, owner: Option<HWND>, is_dark: bool) {
         let mini = !GetPropW(hwnd, wide(MINI_FRAME).as_ptr()).is_null();
         let border: u32 = if is_dark { if mini { 0x00343434 } else { 0x002b2b2b } } else { 0x00d0d9dd };
         let text: u32 = if is_dark { 0x00ecf1f4 } else { 0x001e2529 }; let corner: i32 = 2;
-        DwmSetWindowAttribute(hwnd, 20, (&dark as *const i32).cast(), 4);
+        // Prefer the current dark-frame attribute. Older Windows 10 builds
+        // expose attribute 19 instead; unsupported attributes are harmless on 7.
+        if DwmSetWindowAttribute(hwnd, 20, (&dark as *const i32).cast(), 4) < 0 {
+            DwmSetWindowAttribute(hwnd, 19, (&dark as *const i32).cast(), 4);
+        }
         DwmSetWindowAttribute(hwnd, 36, (&text as *const u32).cast(), 4);
         DwmSetWindowAttribute(hwnd, 35, (&color as *const u32).cast(), 4);
         DwmSetWindowAttribute(hwnd, 34, (&border as *const u32).cast(), 4);
         DwmSetWindowAttribute(hwnd, 33, (&corner as *const i32).cast(), 4);
-        if let Some(owner) = owner { SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner as isize); }
+        if let Some(owner) = owner { SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner as _); }
     }
 }
 pub fn show(window: &slint::Window) {
@@ -162,14 +169,14 @@ pub fn configure_chrome(window: &slint::Window, mini: bool) {
         let original = GetWindowLongPtrW(hwnd, GWLP_WNDPROC);
         if original == 0 || SetPropW(hwnd, wide(FRAME_PROC).as_ptr(), original as HANDLE) == 0 { return; }
         if mini { SetPropW(hwnd, wide(MINI_FRAME).as_ptr(), 1usize as HANDLE); }
-        SetWindowLongPtrW(hwnd, GWLP_WNDPROC, frame_proc as *const () as isize);
+        SetWindowLongPtrW(hwnd, GWLP_WNDPROC, frame_proc as *const () as _);
         let mut style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32 | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU;
         if mini {
             style &= !(WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
             let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
-            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ((ex_style | WS_EX_TOOLWINDOW) & !WS_EX_APPWINDOW) as isize);
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ((ex_style | WS_EX_TOOLWINDOW) & !WS_EX_APPWINDOW) as _);
         } else { style |= WS_MINIMIZEBOX | WS_MAXIMIZEBOX; }
-        SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
+        SetWindowLongPtrW(hwnd, GWL_STYLE, style as _);
         let margins = MARGINS { cxLeftWidth: 1, cxRightWidth: 1, cyTopHeight: 1, cyBottomHeight: 1 };
         DwmExtendFrameIntoClientArea(hwnd, &margins);
         SetWindowPos(hwnd, std::ptr::null_mut(), 0, 0, 0, 0,
@@ -197,8 +204,8 @@ unsafe extern "system" fn frame_proc(hwnd: HWND, message: u32, w: WPARAM, l: LPA
             let mut rect: RECT = std::mem::zeroed(); GetWindowRect(hwnd, &mut rect);
             let x = (l as u32 & 0xffff) as i16 as i32;
             let y = ((l as u32 >> 16) & 0xffff) as i16 as i32;
-            let dpi = GetDpiForWindow(hwnd).max(96);
-            let border = GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+            let dpi = window_dpi(hwnd);
+            let border = system_metric_for_dpi(SM_CXSIZEFRAME, dpi) + system_metric_for_dpi(SM_CXPADDEDBORDER, dpi);
             let left = x < rect.left + border; let right = x >= rect.right - border;
             let top = y < rect.top + border; let bottom = y >= rect.bottom - border;
             let hit = match (left, right, top, bottom) {
@@ -228,6 +235,38 @@ pub fn caption_action(window: &slint::Window, action: &str) {
     }
 }
 pub fn maximized(window: &slint::Window) -> bool { hwnd(window).is_some_and(|hwnd| unsafe { IsZoomed(hwnd) != 0 }) }
+
+type DpiForWindow = unsafe extern "system" fn(HWND) -> u32;
+type MetricForDpi = unsafe extern "system" fn(i32, u32) -> i32;
+struct DpiApis { window: Option<DpiForWindow>, metric: Option<MetricForDpi> }
+fn dpi_apis() -> &'static DpiApis {
+    static APIS: OnceLock<DpiApis> = OnceLock::new();
+    APIS.get_or_init(|| unsafe {
+        let module = GetModuleHandleW(wide("user32.dll").as_ptr());
+        DpiApis {
+            window: GetProcAddress(module, c"GetDpiForWindow".as_ptr().cast())
+                .map(|function| std::mem::transmute::<unsafe extern "system" fn() -> isize, DpiForWindow>(function)),
+            metric: GetProcAddress(module, c"GetSystemMetricsForDpi".as_ptr().cast())
+                .map(|function| std::mem::transmute::<unsafe extern "system" fn() -> isize, MetricForDpi>(function)),
+        }
+    })
+}
+fn window_dpi(hwnd: HWND) -> u32 {
+    unsafe {
+        if let Some(function) = dpi_apis().window { return function(hwnd).max(96); }
+        let dc = GetDC(hwnd);
+        if dc.is_null() { return 96; }
+        let dpi = GetDeviceCaps(dc, LOGPIXELSX as i32).max(96) as u32;
+        ReleaseDC(hwnd, dc);
+        dpi
+    }
+}
+fn system_metric_for_dpi(metric: i32, dpi: u32) -> i32 {
+    unsafe {
+        if let Some(function) = dpi_apis().metric { function(metric, dpi) }
+        else { GetSystemMetrics(metric) }
+    }
+}
 
 pub fn pointer_position(window: &slint::Window) -> Option<slint::LogicalPosition> {
     let hwnd = hwnd(window)?;

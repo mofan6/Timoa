@@ -1,4 +1,17 @@
 Unicode true
+!ifndef APP_VERSION
+  !define APP_VERSION "1.1.5"
+!endif
+!ifndef APP_ARCH
+  !define APP_ARCH "x64"
+!endif
+!if "${APP_ARCH}" == "x86"
+  Target x86-unicode
+!else if "${APP_ARCH}" == "x64"
+  Target amd64-unicode
+!else
+  !error "APP_ARCH must be x86 or x64"
+!endif
 !include "MUI2.nsh"
 !include "x64.nsh"
 !include "WinVer.nsh"
@@ -11,7 +24,7 @@ Unicode true
   !define PACKAGE_DIR "..\dist"
 !endif
 Name "Timoa"
-OutFile "${PACKAGE_DIR}\Timoa-Setup.exe"
+OutFile "${PACKAGE_DIR}\Timoa-${APP_VERSION}-windows-${APP_ARCH}-setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\Timoa"
 InstallDirRegKey HKCU "Software\TIMO" "InstallDir"
 RequestExecutionLevel user
@@ -21,11 +34,11 @@ ManifestDPIAware true
 Icon "..\assets\timoa.ico"
 UninstallIcon "..\assets\timoa.ico"
 BrandingText "Timoa"
-VIProductVersion "1.1.5.0"
+VIProductVersion "${APP_VERSION}.0"
 VIAddVersionKey "ProductName" "Timoa"
-VIAddVersionKey "ProductVersion" "1.1.5"
+VIAddVersionKey "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey "FileDescription" "Timoa 安装程序"
-VIAddVersionKey "FileVersion" "1.1.5.0"
+VIAddVersionKey "FileVersion" "${APP_VERSION}.0"
 VIAddVersionKey "LegalCopyright" ""
 
 !define MUI_ABORTWARNING
@@ -60,18 +73,36 @@ FunctionEnd
 !insertmacro RunningCheck "un."
 
 Function .onInit
+!if "${APP_ARCH}" == "x64"
   ${IfNot} ${RunningX64}
-  ${OrIfNot} ${AtLeastWin10}
-    MessageBox MB_OK|MB_ICONSTOP "Timoa 需要 64 位 Windows 10 或更高版本。" /SD IDOK
+    MessageBox MB_OK|MB_ICONSTOP "此安装包需要 64 位 Windows。32 位系统请下载 x86 安装包。" /SD IDOK
+    Abort
+  ${EndIf}
+!endif
+  ${IfNot} ${AtLeastWin7}
+    MessageBox MB_OK|MB_ICONSTOP "Timoa 需要 Windows 7 SP1 或更高版本。" /SD IDOK
+    Abort
+  ${EndIf}
+  ${If} ${IsWin7}
+  ${AndIfNot} ${AtLeastServicePack} 1
+    MessageBox MB_OK|MB_ICONSTOP "请先安装 Windows 7 Service Pack 1。" /SD IDOK
     Abort
   ${EndIf}
   SetShellVarContext current
-  SetRegView 64
+  ${If} ${RunningX64}
+    SetRegView 64
+  ${Else}
+    SetRegView 32
+  ${EndIf}
 FunctionEnd
 
 Function un.onInit
   SetShellVarContext current
-  SetRegView 64
+  ${If} ${RunningX64}
+    SetRegView 64
+  ${Else}
+    SetRegView 32
+  ${EndIf}
   Call un.CheckRunning
 FunctionEnd
 
@@ -97,7 +128,7 @@ Section "Timoa" Main
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\TIMO" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayName" "Timoa"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayVersion" "1.1.5"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "Publisher" "MOTAN"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TIMO" "DisplayIcon" "$INSTDIR\Timoa.exe"

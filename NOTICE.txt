@@ -31,3 +31,12 @@ UPX：https://github.com/upx/upx/releases/tag/v5.1.0
 安装程序使用 NSIS / Modern UI 2 和 zlib 压缩，许可见 licenses/NSIS.txt。
 本版打包器为 w64devkit 2.10.1 随附的 NSIS，版本标识 11-Oct-2026.cvs。
 沿用素材的 Apache 版权声明见 licenses/Apache-2.0.txt。
+
+Windows compatibility source copy / 2026-10-16:
+- Separate x86_64-win7-windows-gnu and i686-win7-windows-gnu builds.
+- Local windows-link patch: COM exports resolved from ole32.dll on Win7 targets.
+- Local Slint winit-backend patch: dynamic DPI API with Win7 system-metrics fallback.
+- Upstream copyright and license notices are retained in vendor/ and licenses/.
+- x86 audio decoder notices: licenses/FFmpeg-Win7-x86-NOTICE.txt.
+- Application behavior/layout are inherited from the regular 1.1.0 release.
+- Compilation and static PE/source inspection only; Windows 7 runtime not verified.

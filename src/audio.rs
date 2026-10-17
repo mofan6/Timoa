@@ -5,7 +5,12 @@ use std::{fs, io::{Cursor, Read}, path::{Path, PathBuf}, process::{Command, Stdi
     sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc}, thread, time::{Duration, Instant}};
 use std::os::windows::process::CommandExt;
 
+#[cfg(target_arch = "x86")]
+const DECODER: &[u8] = include_bytes!("../assets/audio-tools-x86.zip");
+#[cfg(not(target_arch = "x86"))]
 const DECODER: &[u8] = include_bytes!("../assets/audio-tools.zip");
+const DECODER_CACHE: &str = if cfg!(target_arch = "x86") { "codecs/audio-20261015-win7-x86" }
+    else { "codecs/audio-20261015-win7-x64" };
 const MAX_BYTES: u64 = 512 * 1024 * 1024;
 const WAVS: [&[u8]; data::BUILTIN_SOUNDS.len() - 1] = [
     include_bytes!("../assets/sounds/soft-chime.wav.gz"),
@@ -73,7 +78,7 @@ fn decoder(folders: &Folders, cancel: &AtomicBool) -> Result<PathBuf, String> {
         let replacement = exe.parent().unwrap_or(Path::new(".")).join("codecs/ffmpeg.exe");
         if replacement.is_file() { return Ok(replacement); }
     }
-    let target = folders.local.join("codecs/audio-20261015");
+    let target = folders.local.join(DECODER_CACHE);
     let executable = target.join("ffmpeg.exe");
     if executable.is_file() && target.join("complete").is_file() { return Ok(executable); }
     let staging = folders.local.join(format!("codecs/import-{}", data::new_id()));

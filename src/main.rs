@@ -700,6 +700,8 @@ fn import_data(controller: &Controller) {
 fn about(controller: &Controller) {
     if let Some(window) = &controller.borrow().about { native::show(window.window()); return; }
     let Ok(ui) = AboutWindow::new() else { return; };
+    ui.set_version_text(format!("{}  ·  Windows 7–11  ·  {}", env!("CARGO_PKG_VERSION"),
+        if cfg!(target_arch = "x86") { "x86" } else { "x64" }).into());
     ui.global::<Theme>().set_dark(controller.borrow().engine.doc.settings.theme == 0);
     let parent = controller.borrow().ui.upgrade();
     let weak = Rc::downgrade(controller);

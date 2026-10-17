@@ -33,3 +33,7 @@ debug = 0
 [[bin]]
 name = "Timoa"
 path = "src/main.rs"
+
+[patch.crates-io]
+windows-link = { path = "vendor/windows-link" }
+i-slint-backend-winit = { path = "vendor/i-slint-backend-winit" }

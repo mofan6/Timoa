@@ -7,21 +7,20 @@
 
 ## 下载与使用
 
-提供 **Win10/11 64 位、Win7 SP1+ 64 位、Win7 SP1+ 32 位** 三种版本。无需另装 .NET、VC++、Java 或 WebView2 运行库。
+当前版本 **1.1.5**。按处理器架构提供 x64 与 x86，两者共用全部功能和页面。
 
-当前版本为 **1.1.5**，更新内容见 [版本说明](RELEASE-NOTES.md)。
-
-| 系统 | 单文件便携版 | 安装包 |
+| 架构 | 便携版 | 安装包 |
 | --- | --- | --- |
-| Windows 10 / 11 · 64 位 | [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa.exe) | [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-Setup.exe) |
-| Windows 7 SP1+ · 64 位 | [Win7-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x64.exe) | [Win7-x64-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x64-Setup.exe) |
-| Windows 7 SP1+ · 32 位 | [Win7-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x86.exe) | [Win7-x86-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x86-Setup.exe) |
+| 64 位 x64 | [Timoa-1.1.5-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64.exe) | [Timoa-1.1.5-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64-setup.exe) |
+| 32 位 x86 | [Timoa-1.1.5-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86.exe) | [Timoa-1.1.5-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86-setup.exe) |
 
-[完整源码包](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-source.zip) 包含正常版与 Win7 独立源码、第三方许可和音频组件对应源码。Win7 源码也在独立的 [windows7 分支](https://github.com/mofan6/Timoa/tree/windows7) 维护。
+目标系统为 Windows 7 SP1、8、8.1、10、11。x86 需要 SSE2，可通过 WOW64 在 x64 Windows 上运行；没有单独的 Windows 11 32 位系统。无需另装 .NET、VC++、Java 或 WebView2。
 
-Win7 包已完成编译和静态架构检查，尚未在 Windows 7 真机或虚拟机上验证；32 位版需要 SSE2。旧版本见 [GitHub Releases](https://github.com/mofan6/Timoa/releases)。
+当前测试范围与系统能力回退见 [Windows 支持说明](WINDOWS-SUPPORT.md)。未实测的旧系统不标记为验证通过。更新记录见 [版本说明](RELEASE-NOTES.md)。
 
-单 EXE 请先放在固定位置，再开启开机启动；移动程序后需要重新开启。
+源码包只有一套 `Timoa/` 源码，包含两个架构的构建入口、资源、第三方许可和 FFmpeg 对应源码。合并前的源码和成品已保留历史备份。
+
+单 EXE 请放在固定位置后开启开机启动；移动程序后需要重新开启。升级前从托盘退出旧版。
 
 ## 功能
 
@@ -52,7 +51,7 @@ Win7 包已完成编译和静态架构检查，尚未在 Windows 7 真机或虚�
 ## 构建与许可
 
 使用 **Rust + Slint 1.18.1**，原生编译并静态链接语言运行时。
-构建方法、项目结构和体积说明见 [开发文档](docs/BUILDING.zh-CN.md)。
+当前两个架构的编译与打包方法见 [Windows 支持与构建](WINDOWS-SUPPORT.md)，项目结构与历史开发资料见 [开发文档](docs/BUILDING.zh-CN.md)。
 发布前对备份及开机启动的代码审查记录见 [代码审查](docs/代码审查.md)；该记录不代表实际功能验证通过。
 
 应用代码采用 [Apache-2.0](LICENSE)。第三方许可及素材版权声明见 [NOTICE.txt](NOTICE.txt) 和 [licenses](licenses)。

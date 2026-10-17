@@ -7,21 +7,18 @@
 
 ## Download
 
-**Windows 10/11 x64, Windows 7 SP1+ x64, and Windows 7 SP1+ x86.** No separate .NET, VC++, Java or WebView2 runtime installation is required.
+Version **1.1.5**. One source tree provides x64 and x86 builds with the same features and declarative UI.
 
-Current version: **1.1.5**. See [release notes](RELEASE-NOTES.md).
-
-| System | Portable EXE | Installer |
+| Architecture | Portable EXE | Installer |
 | --- | --- | --- |
-| Windows 10 / 11 · x64 | [Timoa.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa.exe) | [Timoa-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-Setup.exe) |
-| Windows 7 SP1+ · x64 | [Win7-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x64.exe) | [Win7-x64-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x64-Setup.exe) |
-| Windows 7 SP1+ · x86 | [Win7-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x86.exe) | [Win7-x86-Setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-Win7-x86-Setup.exe) |
+| x64 | [Timoa-1.1.5-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64.exe) | [Timoa-1.1.5-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64-setup.exe) |
+| x86 | [Timoa-1.1.5-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86.exe) | [Timoa-1.1.5-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86-setup.exe) |
 
-The [complete source archive](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-source.zip) contains separate normal and Windows 7 source trees, licenses and corresponding audio-decoder source. Compatibility development is also maintained in the [windows7 branch](https://github.com/mofan6/Timoa/tree/windows7).
+Targets Windows 7 SP1, 8, 8.1, 10 and 11. x86 requires SSE2 and also runs through WOW64 on x64 Windows. Windows 11 has no x86 OS edition. No separate .NET, VC++, Java or WebView2 runtime installation is required.
 
-Windows 7 packages have been compiled and statically inspected, but have not been run on Windows 7 hardware or a VM. The x86 build requires SSE2. Earlier releases remain available from [GitHub Releases](https://github.com/mofan6/Timoa/releases).
+See [WINDOWS-SUPPORT.md](WINDOWS-SUPPORT.md) for actual verification coverage and runtime capability fallbacks. Systems that have not been run are not described as verified. The source ZIP contains one self-contained `Timoa/` tree for both architectures, licenses and corresponding decoder source. Earlier normal and Windows 7 source snapshots remain preserved.
 
-Keep the portable EXE in a permanent location before enabling startup at sign-in. Re-enable startup if you move it.
+Keep the portable EXE in a permanent location before enabling startup. Exit an older instance from the tray before upgrading.
 
 ## Features
 
@@ -50,7 +47,7 @@ Uninstallation preserves user data. Exit an older version from the tray before r
 
 ## Build and licenses
 
-Built with Rust and Slint 1.18.1, with a statically linked language runtime. See [the build documentation](docs/BUILDING.zh-CN.md) for toolchain and packaging details.
+Built with Rust and Slint 1.18.1, with a statically linked language runtime. See [Windows support and builds](WINDOWS-SUPPORT.md) for the current toolchain and packaging instructions; [the development documentation](docs/BUILDING.zh-CN.md) preserves project structure and historical notes.
 
 Application code is licensed under [Apache-2.0](LICENSE). See [NOTICE.txt](NOTICE.txt), [licenses](licenses) and [third-party/FFmpeg](third-party/FFmpeg) for third-party notices and corresponding decoder source.
 

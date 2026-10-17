@@ -1,6 +1,6 @@
 # Timoa 1.1.5 · 2026-10-17
 
-- 新增 Windows 7 SP1+ 64 位与 32 位兼容包，正常版继续面向 Win10/11 64 位。
+- Windows 版本统一为 64 位 x64 和 32 位 x86，同一套源码，目标支持 Windows 7 SP1–11；每种架构提供单 EXE 与安装包，无需另装运行库。
 - 专注页面支持 1 秒内三次 M 开始、继续或再开一轮，N 暂停。
 - 倒计时卡片和精简悬浮窗显示预计结束时间。
 - 自动循环倒计时，可用分钟:秒滚轮设置轮次间隔；00:00 按 1 秒处理。
@@ -10,7 +10,7 @@
 - 新增内置音乐《花火大会》《黄昏之时》，均带 0.8 秒淡入、0.8 秒淡出，可完整试听。
 - 新增设置和每日统计随 JSON 备份保存；自定义音频仍不包含在备份中。旧累计值保留，每日明细从支持此功能的版本开始记录。
 
-English: Windows 7 x64/x86 packages, focus keyboard shortcuts, expected finish times, automatic countdown loops, three next-round presets, compact reminders, daily/hourly focus charts with a fixed 60-minute scale, clearer tooltips, and two new built-in music clips with 0.8-second fades. New preferences and statistics are included in JSON backups; custom audio files are not.
+English: Unified Windows 7 SP1–11 x64/x86 portable EXEs and installers from one source tree, focus keyboard shortcuts, expected finish times, automatic countdown loops, three next-round presets, compact reminders, daily/hourly focus charts with a fixed 60-minute scale, clearer tooltips, and two new built-in music clips with 0.8-second fades. New preferences and statistics are included in JSON backups; custom audio files are not.
 
 感谢 [@malinfossum](https://github.com/malinfossum) 的 [Tidsro](https://github.com/malinfossum/tidsro) 提供最初灵感与六段基础铃声。
 

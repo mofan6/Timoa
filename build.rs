@@ -26,7 +26,8 @@ fn main() {
         if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("gnu") {
             // Rust's bundled MinGW CRT omits this Windows shell import library.
             // Copy only the import library so an unrelated compiler CRT is never linked.
-            if let Ok(output) = std::process::Command::new("gcc").arg("-print-file-name=libshlwapi.a").output() {
+            let compiler = if std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("x86") { "i686-w64-mingw32-gcc" } else { "x86_64-w64-mingw32-gcc" };
+            if let Ok(output) = std::process::Command::new(compiler).arg("-print-file-name=libshlwapi.a").output() {
                 let path = String::from_utf8_lossy(&output.stdout).trim().to_owned();
                 if std::path::Path::new(&path).is_file() {
                     let out = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
@@ -36,6 +37,9 @@ fn main() {
             }
         }
         let mut resource = winresource::WindowsResource::new();
+        if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("gnu") {
+            resource.set_windres_path(if std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("x86") { "i686-w64-mingw32-windres" } else { "x86_64-w64-mingw32-windres" });
+        }
         resource.set_icon("assets/timoa.ico");
         resource.set("ProductName", "Timoa");
         resource.set("FileDescription", "Timoa 原生声明式计时与闹钟");
