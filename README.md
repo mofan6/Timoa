@@ -6,7 +6,7 @@
 ![Timoa 界面预览：设置、专注计时、闹钟与每周计划](assets/screenshot.png)
 
 <p align="center">
-  <img src="assets/mini-window.png" width="372" alt="Timoa 精简悬浮窗：专注倒计时与预计结束时间" />
+  <img src="assets/mini-window.png" width="516" alt="Timoa 精简悬浮窗：专注倒计时与预计结束时间" />
   <br />
   <sub>精简悬浮窗</sub>
 </p>

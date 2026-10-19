@@ -6,7 +6,7 @@
 ![Timoa interface: settings, focus timer, alarms and weekly schedule](assets/screenshot.png)
 
 <p align="center">
-  <img src="assets/mini-window.png" width="372" alt="Timoa mini window showing the focus countdown and expected finish time" />
+  <img src="assets/mini-window.png" width="516" alt="Timoa mini window showing the focus countdown and expected finish time" />
   <br />
   <sub>Mini window</sub>
 </p>
