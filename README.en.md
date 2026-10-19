@@ -5,6 +5,12 @@
 
 ![Timoa interface: settings, focus timer, alarms and weekly schedule](assets/screenshot.png)
 
+<p align="center">
+  <img src="assets/mini-window.png" width="372" alt="Timoa mini window showing the focus countdown and expected finish time" />
+  <br />
+  <sub>Mini window</sub>
+</p>
+
 ## Download
 
 Version **1.1.5**. One source tree provides x64 and x86 builds with the same features and declarative UI.
