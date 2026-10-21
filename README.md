@@ -3,6 +3,8 @@
 <p align="center">轻量级 Windows 倒计时、闹钟与专注计时工具<br/>A lightweight countdown timer, alarm clock and focus timer for Windows.</p>
 <p align="center"><a href="README.en.md">English</a> · <a href="https://github.com/mofan6/Timoa/releases/latest">下载 Download</a> · <a href="https://github.com/mofan6/Timoa/issues">反馈 Issues</a></p>
 
+![Timoa 界面预览：倒计时、闹钟、一周安排与设置](assets/timoa-overview-2026-10-21.png)
+
 <p align="center">
   <img src="assets/mini-window.png" width="516" alt="Timoa 精简悬浮窗：专注倒计时与预计结束时间" />
   <br />
