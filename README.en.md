@@ -3,8 +3,6 @@
 <p align="center">A lightweight countdown timer, alarm clock and focus timer for Windows.</p>
 <p align="center"><a href="README.md">简体中文</a> · <a href="https://github.com/mofan6/Timoa/releases/latest">Download</a> · <a href="https://github.com/mofan6/Timoa/issues">Issues</a></p>
 
-![Timoa interface: settings, focus timer, alarms and weekly schedule](assets/screenshot.png)
-
 <p align="center">
   <img src="assets/mini-window.png" width="516" alt="Timoa mini window showing the focus countdown and expected finish time" />
   <br />
