@@ -8,26 +8,26 @@
     {
       "file": "Timoa-1.2.0-windows-x64.exe",
       "architecture": "x64",
-      "bytes": 11588608,
-      "sha256": "4521C3086A5FAEAC084C9ACB1A549DCC82D8151EC91DBD288B2327B4604E527C"
+      "bytes": 11373568,
+      "sha256": "A9B11237196AE201502227CE635FCBB758BC769E4D55349B06B350E5E4A6B991"
     },
     {
       "file": "Timoa-1.2.0-windows-x64-setup.exe",
       "architecture": "x64",
-      "bytes": 11894627,
-      "sha256": "0057A13CFA1B674D2873A4A9CE65FDF13A37A889EC2E7CFAC76B21C99E02AF4C"
+      "bytes": 11679364,
+      "sha256": "ACB6A4D8F0C494D5A11A1A27E079F68CBE042B5E6A371990BCCA8F2ABA506466"
     },
     {
       "file": "Timoa-1.2.0-windows-x86.exe",
       "architecture": "x86",
-      "bytes": 11352064,
-      "sha256": "CF6102E2034A4C08E7CC23ACF98B023556C4848B1BCB9805ACA8D5692135DF55"
+      "bytes": 11352576,
+      "sha256": "09B7C89CAC5DCFBBB9CB08953DECC7855CB90AA7CBC0E68F406228EE0933B570"
     },
     {
       "file": "Timoa-1.2.0-windows-x86-setup.exe",
       "architecture": "x86",
-      "bytes": 11642763,
-      "sha256": "0D6947DB8B64E66204A9A73EDA29369315621A89CD2488F8AABDA9415B86DADF"
+      "bytes": 11643377,
+      "sha256": "C53CBA226A0A4AE853E1D2C4B92F8FE1C4FA0ECC3E0B39B171FDA5A1C678209E"
     }
   ],
   "runtimeVerificationComplete": false

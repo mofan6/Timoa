@@ -14,8 +14,8 @@
   "reports": [
     {
       "file": "Timoa.exe",
-      "bytes": 19464192,
-      "sha256": "67A8D641BA5A1B86BE43335FA7B77C1F54ADAEB6558251C8B0CF53140A452AA7",
+      "bytes": 19464704,
+      "sha256": "EF5D51948F090FAAB14DAC792135373A9A80AD72048891C3FF6DF81ADB8CE303",
       "architecture": "x64",
       "subsystemVersion": "6.1",
       "subsystem": 2,
@@ -411,8 +411,8 @@
     },
     {
       "file": "Timoa-1.2.0-windows-x64.exe",
-      "bytes": 11588608,
-      "sha256": "4521C3086A5FAEAC084C9ACB1A549DCC82D8151EC91DBD288B2327B4604E527C",
+      "bytes": 11373568,
+      "sha256": "A9B11237196AE201502227CE635FCBB758BC769E4D55349B06B350E5E4A6B991",
       "architecture": "x64",
       "subsystemVersion": "6.1",
       "subsystem": 2,
@@ -483,8 +483,8 @@
     },
     {
       "file": "Timoa-1.2.0-windows-x64-setup.exe",
-      "bytes": 11894627,
-      "sha256": "0057A13CFA1B674D2873A4A9CE65FDF13A37A889EC2E7CFAC76B21C99E02AF4C",
+      "bytes": 11679364,
+      "sha256": "ACB6A4D8F0C494D5A11A1A27E079F68CBE042B5E6A371990BCCA8F2ABA506466",
       "architecture": "x64",
       "subsystemVersion": "5.1",
       "subsystem": 2,
@@ -1246,8 +1246,8 @@
     },
     {
       "file": "unpacked-x64.exe",
-      "bytes": 19464192,
-      "sha256": "1940C1C9E481961B305343F2E8105CA4CF3A126B0F368A0E8275AB1D5970E97E",
+      "bytes": 19464704,
+      "sha256": "F4AFF1AD1A515C137FBC2E750B5F5CC795BEEEF78E30BBCDEE6F49883782D24F",
       "architecture": "x64",
       "subsystemVersion": "6.1",
       "subsystem": 2,
@@ -1644,8 +1644,8 @@
     },
     {
       "file": "Timoa.exe",
-      "bytes": 18947072,
-      "sha256": "C2F3B133FD041B33CA5C13C101C47F065A95DD5662EE76166DEF5C05E6A3024B",
+      "bytes": 18947584,
+      "sha256": "60C5D62CEA3654B72DD3FE56D1165F4D6EF31EDA9677EE64D8029BD891C15E87",
       "architecture": "x86",
       "subsystemVersion": "6.1",
       "subsystem": 2,
@@ -2115,8 +2115,8 @@
     },
     {
       "file": "Timoa-1.2.0-windows-x86.exe",
-      "bytes": 11352064,
-      "sha256": "CF6102E2034A4C08E7CC23ACF98B023556C4848B1BCB9805ACA8D5692135DF55",
+      "bytes": 11352576,
+      "sha256": "09B7C89CAC5DCFBBB9CB08953DECC7855CB90AA7CBC0E68F406228EE0933B570",
       "architecture": "x86",
       "subsystemVersion": "6.1",
       "subsystem": 2,
@@ -2187,8 +2187,8 @@
     },
     {
       "file": "Timoa-1.2.0-windows-x86-setup.exe",
-      "bytes": 11642763,
-      "sha256": "0D6947DB8B64E66204A9A73EDA29369315621A89CD2488F8AABDA9415B86DADF",
+      "bytes": 11643377,
+      "sha256": "C53CBA226A0A4AE853E1D2C4B92F8FE1C4FA0ECC3E0B39B171FDA5A1C678209E",
       "architecture": "x86",
       "subsystemVersion": "4.0",
       "subsystem": 2,
@@ -2953,8 +2953,8 @@
     },
     {
       "file": "unpacked-x86.exe",
-      "bytes": 18947072,
-      "sha256": "1B12AD7A3EF2DF48545ED1551E0FEBA8F4912A3892125D3275EA87D25DAD4885",
+      "bytes": 18947584,
+      "sha256": "C920F30913B17990520B92D50BEB1952FC722710444D99C7EFE504F02538DDF6",
       "architecture": "x86",
       "subsystemVersion": "6.1",
       "subsystem": 2,

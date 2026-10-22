@@ -120,17 +120,17 @@ impl App {
             native::configure_chrome(ui.window(), false);
             ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant);
             ui.set_theme_index(self.engine.doc.settings.theme); ui.set_color_theme(variant);
-            native::theme_frame(ui.window(), None, dark);
+            apply_native_theme(&ui, None);
             ui.window().request_redraw();
         }
         self.mini.global::<Theme>().set_dark(dark); self.mini.global::<Theme>().set_variant(variant);
         native::configure_chrome(self.mini.window(), true);
-        native::theme_frame(self.mini.window(), None, dark);
+        apply_native_theme(&self.mini, None);
         self.mini.window().request_redraw();
-        if let Some((ui, _)) = &self.confirm { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
-        if let Some((ui, _)) = &self.alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
-        if let Some((ui, _)) = &self.clock_alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
-        if let Some(ui) = &self.about { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
+        if let Some((ui, _)) = &self.confirm { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
+        if let Some((ui, _)) = &self.alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
+        if let Some((ui, _)) = &self.clock_alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
+        if let Some(ui) = &self.about { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
     }
     fn set_compact(&mut self, compact: bool) {
         self.commit(); self.compact = compact; self.refresh();
@@ -141,7 +141,7 @@ impl App {
                     native::place_mini(self.mini.window(), ui.window()); self.mini_positioned = true;
                 }
                 let _ = self.mini.show(); let _ = ui.hide();
-                native::theme_frame(self.mini.window(), None, self.engine.doc.settings.theme == 0);
+                apply_native_theme(&self.mini, None);
             } else {
                 native::show(ui.window()); let _ = self.mini.hide();
             }
@@ -463,9 +463,19 @@ impl App {
     }
 }
 
-fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&slint::Window>, dark: bool) {
+fn apply_native_theme<C: ComponentHandle>(window: &C, owner: Option<windows_sys::Win32::Foundation::HWND>)
+where for<'a> Theme<'a>: slint::Global<'a, C> {
+    let theme = window.global::<Theme>();
+    native::theme_frame(window.window(), owner, native::FramePalette {
+        dark: theme.get_dark(), caption: theme.get_bg(), text: theme.get_text(), border: theme.get_line(),
+    });
+}
+
+fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&slint::Window>)
+where for<'a> Theme<'a>: slint::Global<'a, C> {
     let _ = window.show();
     let owner = parent.and_then(native::hwnd);
+    apply_native_theme(window, owner);
     if let Some(parent) = parent {
         {
             let position = parent.position();
@@ -476,7 +486,9 @@ fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&slint::W
     }
     let weak = window.as_weak();
     slint::Timer::single_shot(Duration::from_millis(10), move || {
-        if let Some(window) = weak.upgrade() { native::theme_frame(window.window(), owner, dark); }
+        // Read the live palette again: a theme change before this callback must
+        // not restore the colors captured when the popup was first opened.
+        if let Some(window) = weak.upgrade() { apply_native_theme(&window, owner); }
     });
 }
 
@@ -515,7 +527,7 @@ fn present_alert(controller: &Controller) {
     let parent = controller.borrow().ui.upgrade();
     {
         let state = controller.borrow();
-        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|p| p.window()) }, state.engine.doc.settings.theme == 0);
+        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|p| p.window()) });
     }
     {
         let mut app = controller.borrow_mut();
@@ -544,7 +556,7 @@ fn present_clock_alert(controller: &Controller) {
     let parent = controller.borrow().ui.upgrade();
     {
         let state = controller.borrow();
-        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|main| main.window()) }, dark);
+        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|main| main.window()) });
     }
     controller.borrow_mut().clock_alert = Some((ui, alert));
 }
@@ -701,7 +713,7 @@ fn confirm(controller: &Controller, action: Confirmation) {
         if !imported { state.commit(); } state.refresh();
     } });
     controller.borrow_mut().confirm = Some((ui.clone_strong(), action));
-    show_owned(&ui, parent.as_ref().map(|p| p.window()), controller.borrow().engine.doc.settings.theme == 0);
+    show_owned(&ui, parent.as_ref().map(|p| p.window()));
 }
 
 fn choose_audio(controller: &Controller) {
@@ -780,7 +792,7 @@ fn about(controller: &Controller) {
         if let Some(parent) = path.parent() { let _ = fs::create_dir_all(parent); }
         if fs::write(&path, text.as_bytes()).is_ok() { native::open(&path); }
     } });
-    controller.borrow_mut().about = Some(ui.clone_strong()); show_owned(&ui, parent.as_ref().map(|p| p.window()), controller.borrow().engine.doc.settings.theme == 0);
+    controller.borrow_mut().about = Some(ui.clone_strong()); show_owned(&ui, parent.as_ref().map(|p| p.window()));
 }
 
 fn bind(controller: &Controller, ui: &MainWindow) {

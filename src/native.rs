@@ -133,13 +133,24 @@ pub fn hwnd(window: &slint::Window) -> Option<HWND> {
         raw_window_handle::RawWindowHandle::Win32(handle) => Some(handle.hwnd.get() as HWND), _ => None,
     }
 }
-pub fn theme_frame(window: &slint::Window, owner: Option<HWND>, is_dark: bool) {
+pub struct FramePalette {
+    pub dark: bool,
+    pub caption: slint::Color,
+    pub text: slint::Color,
+    pub border: slint::Color,
+}
+fn color_ref(color: slint::Color) -> u32 {
+    // Windows COLORREF is 0x00BBGGRR, unlike Slint's ARGB representation.
+    color.red() as u32 | (color.green() as u32) << 8 | (color.blue() as u32) << 16
+}
+pub fn theme_frame(window: &slint::Window, owner: Option<HWND>, palette: FramePalette) {
     let Some(hwnd) = hwnd(window) else { return; };
     unsafe {
-        let dark: i32 = is_dark as i32; let color: u32 = if is_dark { 0x000a0a0a } else { 0x00f0f4f5 };
-        let mini = !GetPropW(hwnd, wide(MINI_FRAME).as_ptr()).is_null();
-        let border: u32 = if is_dark { if mini { 0x00343434 } else { 0x002b2b2b } } else { 0x00d0d9dd };
-        let text: u32 = if is_dark { 0x00ecf1f4 } else { 0x001e2529 }; let corner: i32 = 2;
+        let dark: i32 = palette.dark as i32;
+        let color = color_ref(palette.caption);
+        let border = color_ref(palette.border);
+        let text = color_ref(palette.text);
+        let corner: i32 = 2;
         // Prefer the current dark-frame attribute. Older Windows 10 builds
         // expose attribute 19 instead; unsupported attributes are harmless on 7.
         if DwmSetWindowAttribute(hwnd, 20, (&dark as *const i32).cast(), 4) < 0 {
