@@ -1,0 +1,12 @@
+FemtoVG 0.27.0
+https://github.com/femtovg/femtovg
+
+Copyright 2021 Developers of the femtovg project.
+Used under the MIT license, reproduced in FemtoVG-MIT.txt.
+
+Local Windows adapter: static outline glyphs use system DirectWrite coverage
+maps inside the existing grayscale atlas. Shaping and layout remain upstream.
+Variable/color fonts and unsupported cases retain Swash. The loader owns the
+exact font bytes and collection face index selected by the shaping engine.
+
+Corresponding modified source and original notices: vendor/femtovg/.

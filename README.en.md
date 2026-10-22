@@ -13,12 +13,12 @@
 
 ## Download
 
-Version **1.1.5**. One source tree provides x64 and x86 builds with the same features and declarative UI.
+Version **1.2.0**. One source tree provides x64 and x86 builds with the same features and declarative UI.
 
 | Architecture | Portable EXE | Installer |
 | --- | --- | --- |
-| x64 | [Timoa-1.1.5-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64.exe) | [Timoa-1.1.5-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64-setup.exe) |
-| x86 | [Timoa-1.1.5-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86.exe) | [Timoa-1.1.5-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86-setup.exe) |
+| x64 | [Timoa-1.2.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64.exe) | [Timoa-1.2.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64-setup.exe) |
+| x86 | [Timoa-1.2.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86.exe) | [Timoa-1.2.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86-setup.exe) |
 
 Targets Windows 7 SP1, 8, 8.1, 10 and 11. x86 requires SSE2 and also runs through WOW64 on x64 Windows. Windows 11 has no x86 OS edition. No separate .NET, VC++, Java or WebView2 runtime installation is required.
 
@@ -36,7 +36,9 @@ Keep the portable EXE in a permanent location before enabling startup. Exit an o
 - Eight built-in sounds, including Fireworks Festival and At Twilight with 0.8-second fade-ins and fade-outs, and multiple custom sounds with individual preview and removal. Import common unencrypted MP3, FLAC, M4A, OGG, WAV and other audio files with offline conversion.
 - Automatic countdown loops with adjustable breaks and three customizable next-round presets. Expected finish time is shown in countdown cards and the mini window.
 - Daily completed focus duration, rounds and hourly charts with a fixed 60-minute scale, plus persistent lifetime totals. Paused time is excluded.
-- Dark/light themes and three embedded languages: Simplified Chinese, Traditional Chinese and English. Simplified Chinese is the default.
+- Six color themes (Gold, Mist Blue, Bamboo, Violet, Rose and Warm Orange), each with light and dark modes; three embedded languages: Simplified Chinese, Traditional Chinese and English. Simplified Chinese is the default.
+- Independent hourly and half-hour chimes with on-screen reminders, the default sound and explanatory tooltips.
+- Countdown and alarm name history with one-click reuse and individual removal.
 - Focus-page shortcuts: tap `M` three times within one second to start, resume or begin another round; press `N` to pause.
 - System tray, `Ctrl + Alt + T`, optional startup at sign-in, and JSON backup/restore.
 
@@ -45,7 +47,7 @@ Alarms cannot sound while the computer is shut down, asleep or the application i
 
 ## Data and backups
 
-JSON backups contain plans, settings and focus statistics. **Custom audio files are not included.** A pre-import snapshot is saved as `data-before-import.json` before restoring a backup.
+JSON backups contain plans, settings, theme and chime preferences, name history and focus statistics. **Custom audio files are not included.** A pre-import snapshot is saved as `data-before-import.json` before restoring a backup.
 
 For compatibility with earlier TIMO versions, user data remains in `%APPDATA%\TIMO`. Custom audio is stored in its `sounds` folder and may be backed up separately. Decoder files are cached in `%LOCALAPPDATA%\TIMO\codecs`; importing audio does not require a network connection.
 
@@ -54,6 +56,8 @@ Uninstallation preserves user data. Exit an older version from the tray before r
 ## Build and licenses
 
 Built with Rust and Slint 1.18.1, with a statically linked language runtime. See [Windows support and builds](WINDOWS-SUPPORT.md) for the current toolchain and packaging instructions; [the development documentation](docs/BUILDING.zh-CN.md) preserves project structure and historical notes.
+
+The Chinese interface embeds subsets of Sarasa UI SC Regular and Bold with the original hinting preserved. English retains Segoe UI, and user text outside the bundled coverage uses system font fallback. See [font resources](assets/fonts/README.md).
 
 Application code is licensed under [Apache-2.0](LICENSE). See [NOTICE.txt](NOTICE.txt), [licenses](licenses) and [third-party/FFmpeg](third-party/FFmpeg) for third-party notices and corresponding decoder source.
 

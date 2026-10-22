@@ -24,7 +24,7 @@ const WAVS: [&[u8]; data::BUILTIN_SOUNDS.len() - 1] = [
 ];
 
 #[derive(Default)]
-pub struct Player { data: Vec<u8> }
+pub struct Player { data: Vec<u8>, release_at: Option<Instant> }
 impl Player {
     pub fn play(&mut self, choice: i32, folders: &Folders) -> Result<(), String> {
         self.stop();
@@ -38,9 +38,20 @@ impl Player {
         if bytes.len() < 44 { return Err("提示音内容为空或已损坏。".into()); }
         self.data = bytes;
         let played = unsafe { windows_sys::Win32::Media::Audio::PlaySoundW(self.data.as_ptr().cast(), std::ptr::null_mut(), 0x1 | 0x4 | 0x2) };
-        if played == 0 { Err("Windows 无法播放这段提示音，请重新导入。".into()) } else { Ok(()) }
+        if played == 0 {
+            self.stop(); Err("Windows 无法播放这段提示音，请重新导入。".into())
+        } else {
+            // Retain SND_MEMORY bytes while Windows can read them. Once a
+            // known-length WAV has finished, stop the native player before
+            // releasing its storage, even if its reminder stays open.
+            self.release_at = self.wav_duration().and_then(|duration| Instant::now().checked_add(duration + Duration::from_secs(1)));
+            Ok(())
+        }
     }
     pub fn duration(&self) -> Duration {
+        self.wav_duration().unwrap_or(Duration::from_secs(5))
+    }
+    fn wav_duration(&self) -> Option<Duration> {
         let mut position = 12usize; let mut rate = 0u32; let mut length = 0u32;
         while position + 8 <= self.data.len() {
             let size = u32::from_le_bytes(self.data[position+4..position+8].try_into().unwrap()) as usize;
@@ -50,11 +61,15 @@ impl Player {
             if &self.data[position..position+4] == b"data" { length = size as u32; }
             position = start + size + (size & 1);
         }
-        if rate > 0 && length > 0 { Duration::from_secs_f64(length as f64 / rate as f64) } else { Duration::from_secs(5) }
+        if rate > 0 && length > 0 { Some(Duration::from_secs_f64(length as f64 / rate as f64)) } else { None }
+    }
+    pub fn release_finished(&mut self) {
+        if self.release_at.is_some_and(|deadline| Instant::now() >= deadline) { self.stop(); }
     }
     pub fn stop(&mut self) {
         unsafe { windows_sys::Win32::Media::Audio::PlaySoundW(std::ptr::null(), std::ptr::null_mut(), 0); }
-        self.data.clear();
+        self.release_at = None;
+        self.data = Vec::new();
     }
 }
 impl Drop for Player { fn drop(&mut self) { self.stop(); } }

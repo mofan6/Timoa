@@ -1,4 +1,39 @@
+fn check_ui_font_coverage() {
+    use std::{collections::BTreeSet, path::Path};
+    fn scan(path: &Path, chars: &mut BTreeSet<char>) {
+        if path.is_dir() {
+            for entry in std::fs::read_dir(path).unwrap().flatten() { scan(&entry.path(), chars); }
+        } else if matches!(path.extension().and_then(|part| part.to_str()), Some("rs" | "slint" | "json")) {
+            println!("cargo:rerun-if-changed={}", path.display());
+            chars.extend(std::fs::read_to_string(path).unwrap().chars().filter(|ch| matches!(*ch as u32,
+                0x3400..=0x9fff | 0xf900..=0xfaff | 0x20000..=0x323af)));
+        }
+    }
+    let coverage = Path::new("assets/fonts/coverage.txt");
+    println!("cargo:rerun-if-changed={}", coverage.display());
+    println!("cargo:rerun-if-changed=tools/font-common-characters.txt");
+    println!("cargo:rerun-if-changed=tools/subset-ui-fonts.py");
+    println!("cargo:rerun-if-env-changed=TIMO_FONT_PYTHON");
+    println!("cargo:rerun-if-env-changed=TIMO_FONT_MASTER_DIR");
+    let mut required = BTreeSet::new();
+    for directory in ["src", "ui", "i18n"] { scan(Path::new(directory), &mut required); }
+    let bundled: BTreeSet<char> = std::fs::read_to_string(coverage).unwrap_or_default().chars().collect();
+    if required.is_subset(&bundled) { return; }
+    let python = std::env::var_os("TIMO_FONT_PYTHON");
+    let master = std::env::var_os("TIMO_FONT_MASTER_DIR");
+    if let (Some(python), Some(master)) = (python, master) {
+        let status = std::process::Command::new(python).arg("tools/subset-ui-fonts.py")
+            .arg("--master-dir").arg(master).status().expect("Font subset generator");
+        assert!(status.success(), "Font subset generation failed");
+        let regenerated: BTreeSet<char> = std::fs::read_to_string(coverage).unwrap().chars().collect();
+        assert!(required.is_subset(&regenerated), "New UI glyphs were not included");
+    } else {
+        panic!("New Chinese UI text needs font glyphs. Run tools/subset-ui-fonts.py with the full upstream masters, or set TIMO_FONT_PYTHON and TIMO_FONT_MASTER_DIR for automatic generation.");
+    }
+}
+
 fn main() {
+    check_ui_font_coverage();
     let catalog: std::collections::BTreeMap<String, [String; 2]> = serde_json::from_str(
         &std::fs::read_to_string("i18n/messages.json").expect("Translation catalog")
     ).expect("Valid translation catalog");
@@ -19,8 +54,8 @@ fn main() {
         .with_style("fluent-dark".into())
         .with_default_translation_context(slint_build::DefaultTranslationContext::None)
         .with_bundled_translations(bundle)
-        // Keep image files compressed and resolve Windows vector fonts at runtime.
-        // Pre-rasterized embedded fonts greatly inflate a desktop binary and omit dynamic glyphs.
+        // Embed images and common-character subsets of Sarasa UI SC fonts.
+        // Keep vector outlines available for dynamic text and native rasterization.
         .embed_resources(slint_build::EmbedResourcesKind::EmbedFiles)).expect("Slint UI compilation");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("gnu") {

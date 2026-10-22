@@ -13,12 +13,12 @@
 
 ## 下载与使用
 
-当前版本 **1.1.5**。按处理器架构提供 x64 与 x86，两者共用全部功能和页面。
+当前版本 **1.2.0**。按处理器架构提供 x64 与 x86，两者共用全部功能和页面。
 
 | 架构 | 便携版 | 安装包 |
 | --- | --- | --- |
-| 64 位 x64 | [Timoa-1.1.5-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64.exe) | [Timoa-1.1.5-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x64-setup.exe) |
-| 32 位 x86 | [Timoa-1.1.5-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86.exe) | [Timoa-1.1.5-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.1.5/Timoa-1.1.5-windows-x86-setup.exe) |
+| 64 位 x64 | [Timoa-1.2.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64.exe) | [Timoa-1.2.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64-setup.exe) |
+| 32 位 x86 | [Timoa-1.2.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86.exe) | [Timoa-1.2.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86-setup.exe) |
 
 目标系统为 Windows 7 SP1、8、8.1、10、11。x86 需要 SSE2，可通过 WOW64 在 x64 Windows 上运行；没有单独的 Windows 11 32 位系统。无需另装 .NET、VC++、Java 或 WebView2。
 
@@ -38,7 +38,9 @@
 - **提示音管理**：内置八段提示音，含《花火大会》《黄昏之时》，两段音乐均做 0.8 秒淡入淡出；可导入多段自定义音频，逐个试听、选择和删除。支持 MP3、FLAC、M4A、OGG、WAV 等常见非加密音频格式，离线转换。
 - **自动循环与下一轮快捷时长**：可设置轮次间隔和三个快捷时长；倒计时及精简窗显示预计结束时间，完成提醒支持快捷开启下一轮。
 - **每日与总专注时长**：一周页展示每日完成时长、轮次和小时分布，以每小时 60 分钟为满格；暂停时间不计入，原有累计总时长保留。
-- **深浅色模式与三种语言**：简体中文、繁體中文、English，默认简体中文。
+- **六套配色与三种语言**：默认金、雾蓝、青竹、暮紫、玫瑰、暖橘，每套均有深浅色模式；简体中文、繁體中文、English，默认简体中文。
+- **整点与半点报时**：独立开关，在对应时间弹窗并播放默认提示音，附悬浮说明。
+- **名称历史记录**：保存用过的倒计时与闹钟名称，再次创建时可直接选择，也可逐条删除。
 - **专注快捷键**：倒计时或正计时页面内，1 秒内连按三次 `M` 开始、继续或再开一轮；按 `N` 暂停。
 - **桌面常驻**：托盘、`Ctrl + Alt + T` 快捷键、可选开机启动、JSON 备份导出与导入。
 
@@ -47,7 +49,7 @@
 
 ## 数据与备份
 
-- JSON 备份包含计划、设置、下一轮快捷时长、循环偏好和专注统计，**不包含自定义音频**。
+- JSON 备份包含计划、设置、主题、报时开关、名称历史、下一轮快捷时长、循环偏好和专注统计，**不包含自定义音频**。
 - 恢复备份前会保存当前数据到 `data-before-import.json`。
 - 数据目录沿用 `%APPDATA%\TIMO`，以便从 TIMO 升级后继续使用原来的数据。
 - 自定义音频位于上述目录中的 `sounds` 文件夹；需要时可单独备份。
@@ -57,6 +59,7 @@
 ## 构建与许可
 
 使用 **Rust + Slint 1.18.1**，原生编译并静态链接语言运行时。
+中文界面内置更纱黑体 Sarasa UI SC 的常规与加粗字库子集，保留字形微调信息；英文沿用 Segoe UI，自定义文字中未内置的字由系统字体补齐。详见 [字体资源说明](assets/fonts/README.md)。
 当前两个架构的编译与打包方法见 [Windows 支持与构建](WINDOWS-SUPPORT.md)，项目结构与历史开发资料见 [开发文档](docs/BUILDING.zh-CN.md)。
 发布前对备份及开机启动的代码审查记录见 [代码审查](docs/代码审查.md)；该记录不代表实际功能验证通过。
 

@@ -1,0 +1,39 @@
+{
+  "repository": "https://github.com/be5invis/Sarasa-Gothic",
+  "version": "1.0.42",
+  "archive": "https://github.com/be5invis/Sarasa-Gothic/releases/download/v1.0.42/SarasaUiSC-TTF-1.0.42.7z",
+  "archiveSha256": "daba2085409fb8a23dfc22f36e02e8b901a08510a3ac95ce3b0fb7161e6925bd",
+  "license": "../../licenses/Sarasa-Gothic-OFL.txt",
+  "fonts": [
+    {
+      "file": "SarasaUiSC-Regular.ttf",
+      "family": "Timoa Sarasa UI SC",
+      "weight": 400,
+      "bytes": 622164,
+      "sha256": "2e480cd4e46d21313972eaaa83f5a8e408098b70983a80c65aa258276d2361d4",
+      "masterSha256": "81fc5857cbc9b05a16a75c7ad3e848032df52dddd29192f14b48d4b449c973f7",
+      "masterBytes": 24049996,
+      "requestedUnicodeCount": 1724,
+      "unicodeCount": 1724,
+      "unmodified": false
+    },
+    {
+      "file": "SarasaUiSC-Bold.ttf",
+      "family": "Timoa Sarasa UI SC",
+      "weight": 700,
+      "bytes": 626248,
+      "sha256": "e76f5b82f5f7959b3ddc4661bf3f50ba6eea513437ba3e008c81cabbfb31df3f",
+      "masterSha256": "b3e6ef6ce5df339d103fcfa9a146d8338c67eb48333308397861d97b4408aca9",
+      "masterBytes": 23896256,
+      "requestedUnicodeCount": 1724,
+      "unicodeCount": 1724,
+      "unmodified": false
+    }
+  ],
+  "totalBytes": 1248412,
+  "subsetted": true,
+  "family": "Timoa Sarasa UI SC",
+  "subsetTool": "fontTools 4.60.1",
+  "coverage": "All UI/catalog/application characters + modest common-character reserve + Latin/punctuation",
+  "hintingPreserved": true
+}

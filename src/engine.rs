@@ -1,6 +1,6 @@
 //! Pure application state and scheduling; no UI toolkit types or window calls.
 use crate::data::*;
-use chrono::Local;
+use chrono::{Local, TimeZone, Timelike};
 use std::{collections::{HashMap, HashSet}, time::{Duration, Instant}};
 
 #[derive(Clone)]
@@ -12,6 +12,7 @@ pub struct Alert {
     pub sound: i32,
     pub warning: bool,
     pub countdown: bool,
+    pub clock_chime: bool,
     pub default_label: bool,
 }
 
@@ -25,10 +26,13 @@ pub struct Engine {
     cycle_restarted: Vec<String>,
     sampled_remaining: HashMap<String, u64>,
     sampled_stopwatch_ms: u64,
+    clock_checked_at: i64,
+    last_chime_boundary: i64,
 }
 
 impl Engine {
     pub fn new(mut doc: Document, mut message: String) -> Self {
+        initialize_name_history(&mut doc);
         if !doc.focus_stats_initialized {
             doc.total_focus_ms = doc.countdowns.iter().filter(|t| t.finished)
                 .fold(0u64, |total, t| total.saturating_add(t.original_ms));
@@ -61,7 +65,8 @@ impl Engine {
         let sampled_remaining = doc.countdowns.iter().filter(|timer| !timer.finished && !timer.paused)
             .map(|timer| (timer.id.clone(), timer.remaining_ms)).collect();
         let sampled_stopwatch_ms = doc.stopwatch.elapsed_ms;
-        Self { doc, deadlines, warned, message, stopwatch_started: None, cycle_waits: HashMap::new(), cycle_restarted: vec![], sampled_remaining, sampled_stopwatch_ms }
+        Self { doc, deadlines, warned, message, stopwatch_started: None, cycle_waits: HashMap::new(), cycle_restarted: vec![], sampled_remaining, sampled_stopwatch_ms,
+            clock_checked_at: now / 1000, last_chime_boundary: 0 }
     }
     pub fn remaining(&self, timer: &Countdown) -> u64 {
         if timer.finished { return 0; }
@@ -197,6 +202,7 @@ impl Engine {
         self.sampled_remaining.insert(id.clone(), ms);
         self.doc.settings.focus_timer_id = id.clone();
         self.doc.settings.focus_duration_seconds = seconds;
+        remember_name(&mut self.doc.countdown_names, label);
         self.doc.countdowns.push(Countdown { focus_slots: vec![], id, label: text(label), original_ms: ms, remaining_ms: ms,
             ends_at_ms: now_ms() + ms as i64, paused: false, finished: false, sound: sound(selected_sound) });
         Ok(())
@@ -249,6 +255,7 @@ impl Engine {
         }
     }
     pub fn put_alarm(&mut self, alarm: Alarm) {
+        remember_name(&mut self.doc.alarm_names, &alarm.label);
         if alarm.warn_before && Local::now().timestamp() >= alarm.fire_at - 300 { self.warned.insert((alarm.id.clone(), alarm.fire_at)); }
         if let Some(index) = self.doc.alarms.iter().position(|a| a.id == alarm.id) { self.doc.alarms[index] = alarm; }
         else { self.doc.alarms.push(alarm); }
@@ -283,18 +290,19 @@ impl Engine {
                     self.cycle_waits.insert(id.clone(), Instant::now() + Duration::from_secs(self.doc.settings.cycle_interval_seconds.min(3600).max(1)));
                 }
                 alerts.push(Alert { token: new_id(), id, title: "时间到了".into(), label: if timer.label.is_empty() { "这一轮专注已完成。".into() } else { timer.label.clone() },
-                    sound: timer.sound, warning: false, countdown: true, default_label: timer.label.is_empty() });
+                    sound: timer.sound, warning: false, countdown: true, clock_chime: false, default_label: timer.label.is_empty() });
                 changed = true;
             }
         }
         let now = Local::now().timestamp();
+        if let Some(alert) = self.clock_chime(now) { alerts.push(alert); }
         let mut remove = vec![];
         let mut missed = 0;
         for alarm in &mut self.doc.alarms {
             if !alarm.enabled { continue; }
             if alarm.warn_before && now >= alarm.fire_at - 300 && now < alarm.fire_at && self.warned.insert((alarm.id.clone(), alarm.fire_at)) {
                 alerts.push(Alert { token: new_id(), id: alarm.id.clone(), title: "还有 5 分钟".into(), label: alarm.label.clone(),
-                    sound: if alarm.sound == 0 { 0 } else { 1 }, warning: true, countdown: false, default_label: false });
+                    sound: if alarm.sound == 0 { 0 } else { 1 }, warning: true, countdown: false, clock_chime: false, default_label: false });
             }
             if now < alarm.fire_at { continue; }
             let occurrence = if alarm.days == 0 { alarm.fire_at }
@@ -303,7 +311,7 @@ impl Engine {
             else if let Some(next) = next_occurrence(now, alarm.hour, alarm.minute, alarm.days) { alarm.fire_at = next; }
             if now - occurrence <= 300 {
                 alerts.push(Alert { token: new_id(), id: alarm.id.clone(), title: "闹钟提醒".into(), label: if alarm.label.is_empty() { "计划的时间到了。".into() } else { alarm.label.clone() },
-                    sound: alarm.sound, warning: false, countdown: false, default_label: alarm.label.is_empty() });
+                    sound: alarm.sound, warning: false, countdown: false, clock_chime: false, default_label: alarm.label.is_empty() });
             } else { missed += 1; }
             changed = true;
         }
@@ -312,6 +320,23 @@ impl Engine {
         if missed > 0 { self.message = format!("离开期间错过了 {missed} 项闹钟，已更新到下一次计划。"); }
         (alerts, changed)
     }
+    fn clock_chime(&mut self, now: i64) -> Option<Alert> {
+        let previous = std::mem::replace(&mut self.clock_checked_at, now);
+        // Do not replay reports from time spent closed, asleep, or after a clock jump.
+        if now <= previous || now.saturating_sub(previous) > 120 { return None; }
+        let local = Local.timestamp_opt(now, 0).single()?;
+        let boundary = now - i64::from(local.second());
+        if boundary <= previous || boundary == self.last_chime_boundary { return None; }
+        let title = match local.minute() {
+            0 if self.doc.settings.hourly_chime => "整点报时",
+            30 if self.doc.settings.half_hour_chime => "半点报时",
+            _ => return None,
+        };
+        self.last_chime_boundary = boundary;
+        Some(Alert { token: new_id(), id: format!("clock-{boundary}"), title: title.into(),
+            label: format!("{:02}:{:02}", local.hour(), local.minute()), sound: self.doc.settings.default_sound,
+            warning: false, countdown: false, clock_chime: true, default_label: false })
+    }
 }
 
 #[cfg(test)]
@@ -319,6 +344,53 @@ mod tests {
     use super::*;
 
     fn engine() -> Engine { Engine::new(Document::default(), String::new()) }
+
+    fn boundary(hour: u32, minute: u32) -> i64 {
+        Local::now().date_naive().and_hms_opt(hour, minute, 0).unwrap()
+            .and_local_timezone(Local).earliest().unwrap().timestamp()
+    }
+
+    #[test]
+    fn chime_boundary_is_once_only_and_uses_selected_default_sound() {
+        let mut state = engine(); state.doc.settings.hourly_chime = true;
+        state.doc.settings.default_sound = 3;
+        let at = boundary(9, 0); state.clock_checked_at = at - 1;
+        let alert = state.clock_chime(at).unwrap();
+        assert_eq!(alert.title, "整点报时"); assert_eq!(alert.label, "09:00");
+        assert_eq!(alert.sound, 3); assert!(!alert.countdown && !alert.warning && alert.clock_chime);
+        for second in 0..60 { assert!(state.clock_chime(at + second).is_none()); }
+        state.clock_checked_at = at - 1; assert!(state.clock_chime(at).is_none());
+        state.clock_checked_at = at + 3600 - 1;
+        assert!(state.clock_chime(at + 3600).is_some());
+    }
+
+    #[test]
+    fn half_hour_and_full_hour_can_be_enabled_independently() {
+        let mut state = engine(); let full = boundary(8, 0); let half = boundary(8, 30);
+        state.clock_checked_at = full - 1; assert!(state.clock_chime(full).is_none());
+        state.doc.settings.half_hour_chime = true;
+        state.clock_checked_at = full - 1; assert!(state.clock_chime(full).is_none());
+        state.clock_checked_at = half - 1;
+        let alert = state.clock_chime(half + 2).unwrap();
+        assert_eq!(alert.title, "半点报时"); assert_eq!(alert.sound, 0);
+        state.doc.settings.half_hour_chime = false; state.doc.settings.hourly_chime = true;
+        state.clock_checked_at = half + 3600 - 1;
+        assert!(state.clock_chime(half + 3600).is_none());
+        state.clock_checked_at = full + 3600 - 1;
+        assert!(state.clock_chime(full + 3600).is_some());
+    }
+
+    #[test]
+    fn chimes_do_not_replay_after_sleep_backward_clock_or_enabling_mid_minute() {
+        let mut state = engine(); state.doc.settings.hourly_chime = true;
+        let at = boundary(10, 0);
+        state.clock_checked_at = at - 121; assert!(state.clock_chime(at).is_none());
+        state.clock_checked_at = at + 5; assert!(state.clock_chime(at).is_none());
+        state.clock_checked_at = at + 5; assert!(state.clock_chime(at + 6).is_none());
+        state.clock_checked_at = at - 1; state.doc.settings.hourly_chime = false;
+        assert!(state.clock_chime(at).is_none());
+        state.doc.settings.hourly_chime = true; assert!(state.clock_chime(at + 1).is_none());
+    }
 
     #[test]
     fn countdown_controls_keep_original_duration() {

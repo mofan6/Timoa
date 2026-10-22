@@ -26,6 +26,7 @@ pub struct Settings {
     pub selected_tab: i32,
     pub language: i32,
     pub theme: i32,
+    pub color_theme: i32,
     pub custom_sounds: Vec<CustomSound>,
     pub single_focus: bool,
     pub stopwatch_enabled: bool,
@@ -35,12 +36,15 @@ pub struct Settings {
     pub quick_snooze_seconds: Vec<u64>,
     pub auto_cycle: bool,
     pub cycle_interval_seconds: u64,
+    pub hourly_chime: bool,
+    pub half_hour_chime: bool,
 }
 impl Default for Settings {
     fn default() -> Self { Self { default_sound: 0, custom_name: String::new(), startup: false,
-        width: 480., height: 760., selected_tab: 0, language: 0, theme: 0, custom_sounds: vec![],
+        width: 480., height: 760., selected_tab: 0, language: 0, theme: 0, color_theme: 0, custom_sounds: vec![],
         single_focus: false, stopwatch_enabled: false, focus_timer_id: String::new(), focus_duration_seconds: 1500, active_focus_mode: 0,
-        quick_snooze_seconds: vec![300, 600, 900], auto_cycle: false, cycle_interval_seconds: 3 } }
+        quick_snooze_seconds: vec![300, 600, 900], auto_cycle: false, cycle_interval_seconds: 3,
+        hourly_chime: false, half_hour_chime: false } }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -86,6 +90,9 @@ pub struct Stopwatch {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Document {
+    pub countdown_names: Vec<String>,
+    pub alarm_names: Vec<String>,
+    pub name_history_initialized: bool,
     pub focus_days: Vec<crate::stats::FocusDay>,
     pub format: String,
     pub settings: Settings,
@@ -97,7 +104,8 @@ pub struct Document {
 }
 impl Default for Document {
     fn default() -> Self { Self { format: "TIMO.Native.v1".into(), settings: Settings::default(),
-        alarms: vec![], countdowns: vec![], total_focus_ms: 0, focus_stats_initialized: false, stopwatch: Stopwatch::default(), focus_days: vec![] } }
+        alarms: vec![], countdowns: vec![], total_focus_ms: 0, focus_stats_initialized: false, stopwatch: Stopwatch::default(), focus_days: vec![],
+        countdown_names: vec![], alarm_names: vec![], name_history_initialized: false } }
 }
 
 #[derive(Clone)]
@@ -131,6 +139,24 @@ impl Folders {
 }
 
 pub fn text(s: &str) -> String { s.trim().chars().take(200).collect() }
+pub fn remember_name(history: &mut Vec<String>, name: &str) {
+    let name = text(name);
+    if name.is_empty() { return; }
+    history.retain(|item| item != &name);
+    history.insert(0, name);
+    history.truncate(100);
+}
+pub fn initialize_name_history(doc: &mut Document) {
+    if !doc.name_history_initialized {
+        for timer in &doc.countdowns { remember_name(&mut doc.countdown_names, &timer.label); }
+        for alarm in &doc.alarms { remember_name(&mut doc.alarm_names, &alarm.label); }
+        doc.name_history_initialized = true;
+    }
+    for history in [&mut doc.countdown_names, &mut doc.alarm_names] {
+        let mut seen = std::collections::HashSet::new();
+        *history = history.iter().map(|name| text(name)).filter(|name| !name.is_empty() && seen.insert(name.clone())).take(100).collect();
+    }
+}
 pub fn sound(v: i32) -> i32 { if v >= 0 { v } else { 0 } }
 pub fn now_ms() -> i64 { Utc::now().timestamp_millis() }
 pub fn new_id() -> String {
@@ -181,6 +207,7 @@ pub fn sanitize(mut doc: Document) -> Document {
     doc.settings.cycle_interval_seconds = doc.settings.cycle_interval_seconds.min(3600);
     doc.stopwatch.elapsed_ms = doc.stopwatch.elapsed_ms.min(359_999_000);
     doc.settings.theme = doc.settings.theme.clamp(0, 1);
+    doc.settings.color_theme = doc.settings.color_theme.clamp(0, 5);
     doc.settings.language = doc.settings.language.clamp(0, 2);
     let mut sound_ids = std::collections::HashSet::new();
     doc.settings.custom_sounds.retain(|s| s.id >= 7 && builtin_sound_index(s.id).is_none() && sound_ids.insert(s.id));
@@ -205,6 +232,7 @@ pub fn sanitize(mut doc: Document) -> Document {
         t.label = text(&t.label); t.sound = sound(t.sound); t.remaining_ms = t.remaining_ms.min(t.original_ms);
     }
     if !doc.countdowns.iter().any(|timer| timer.id == doc.settings.focus_timer_id) { doc.settings.focus_timer_id.clear(); }
+    initialize_name_history(&mut doc);
     doc
 }
 

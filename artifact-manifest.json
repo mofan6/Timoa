@@ -1,32 +1,33 @@
 {
   "name": "Timoa",
-  "version": "1.1.5",
+  "version": "1.2.0",
+  "date": "2026-10-23",
   "classification": "windows-x64 / windows-x86",
   "minimumTarget": "Windows 7 SP1",
   "artifacts": [
     {
-      "file": "Timoa-1.1.5-windows-x64.exe",
+      "file": "Timoa-1.2.0-windows-x64.exe",
       "architecture": "x64",
-      "bytes": 11035648,
-      "sha256": "8FD46780B64AC4875C25344F4D81DB3E671C07A6AA36D3F268FBE1A7290992ED"
+      "bytes": 11588608,
+      "sha256": "4521C3086A5FAEAC084C9ACB1A549DCC82D8151EC91DBD288B2327B4604E527C"
     },
     {
-      "file": "Timoa-1.1.5-windows-x64-setup.exe",
+      "file": "Timoa-1.2.0-windows-x64-setup.exe",
       "architecture": "x64",
-      "bytes": 11340537,
-      "sha256": "D62AFE198D1622FC0C35C330EF755E533536235495FAB775641F6A97D1402C4D"
+      "bytes": 11894627,
+      "sha256": "0057A13CFA1B674D2873A4A9CE65FDF13A37A889EC2E7CFAC76B21C99E02AF4C"
     },
     {
-      "file": "Timoa-1.1.5-windows-x86.exe",
+      "file": "Timoa-1.2.0-windows-x86.exe",
       "architecture": "x86",
-      "bytes": 10807808,
-      "sha256": "7EDA525568699100A51DD6D0CD797104E145B9EB4AAF2D2D05D14EBC371B4609"
+      "bytes": 11352064,
+      "sha256": "CF6102E2034A4C08E7CC23ACF98B023556C4848B1BCB9805ACA8D5692135DF55"
     },
     {
-      "file": "Timoa-1.1.5-windows-x86-setup.exe",
+      "file": "Timoa-1.2.0-windows-x86-setup.exe",
       "architecture": "x86",
-      "bytes": 11098027,
-      "sha256": "14DC6991E679B3849BEF2F91B773569577644BDE38015C19E5C29F06BB100932"
+      "bytes": 11642763,
+      "sha256": "0D6947DB8B64E66204A9A73EDA29369315621A89CD2488F8AABDA9415B86DADF"
     }
   ],
   "runtimeVerificationComplete": false

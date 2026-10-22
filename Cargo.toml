@@ -1,6 +1,6 @@
 [package]
 name = "timoa"
-version = "1.1.5"
+version = "1.2.0"
 edition = "2024"
 license = "Apache-2.0"
 build = "build.rs"
@@ -34,6 +34,12 @@ debug = 0
 name = "Timoa"
 path = "src/main.rs"
 
+[[test]]
+name = "logic-checks"
+path = "tools/logic-checks.rs"
+
 [patch.crates-io]
 windows-link = { path = "vendor/windows-link" }
 i-slint-backend-winit = { path = "vendor/i-slint-backend-winit" }
+femtovg = { path = "vendor/femtovg" }
+i-slint-renderer-femtovg = { path = "vendor/i-slint-renderer-femtovg" }

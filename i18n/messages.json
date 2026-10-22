@@ -1,4 +1,8 @@
 {
+  "界面字体：Sarasa UI SC": [
+    "介面字體：Sarasa UI SC",
+    "Interface font: Sarasa UI SC"
+  ],
   "Microsoft YaHei UI": [
     "Microsoft JhengHei UI",
     "Segoe UI"
@@ -1010,5 +1014,57 @@
   "把这三个时间设成你常用的时长。倒计时结束后，点提醒窗口里的一个，就会按这个时长开始新一轮；“再来一轮”则沿用上一轮时长。": [
     "把這三個時間設成你常用的時長。倒數計時結束後，點提醒視窗裡的一個，就會按這個時長開始新一輪；「再來一輪」則沿用上一輪時長。",
     "Set three lengths you use often. When a countdown ends, pick one in the reminder to start a new round of that length. Another round repeats the previous length."
+  ],
+  "最近使用": [
+    "最近使用",
+    "Recent names"
+  ],
+  "删除名称": [
+    "刪除名稱",
+    "Delete name"
+  ],
+  "整点报时": [
+    "整點報時",
+    "Hourly chime"
+  ],
+  "半点报时": [
+    "半點報時",
+    "Half-hour chime"
+  ],
+  "打开后，软件运行时，每到 8:00、9:00 这样的整点，就会弹窗并播放默认提示音。默认提示音选了静音时，只弹窗。": [
+    "開啟後，軟體執行時，每到 8:00、9:00 這樣的整點，就會彈窗並播放預設提示音。預設提示音選了靜音時，只彈窗。",
+    "While Timoa is running, show a reminder and play the default sound at each full hour, such as 8:00 or 9:00. If the default sound is Silent, only the reminder appears."
+  ],
+  "打开后，软件运行时，每到 8:30、9:30 这样的半点，就会弹窗并播放默认提示音。默认提示音选了静音时，只弹窗。": [
+    "開啟後，軟體執行時，每到 8:30、9:30 這樣的半點，就會彈窗並播放預設提示音。預設提示音選了靜音時，只彈窗。",
+    "While Timoa is running, show a reminder and play the default sound at each half hour, such as 8:30 or 9:30. If the default sound is Silent, only the reminder appears."
+  ],
+  "主题": [
+    "主題",
+    "Theme"
+  ],
+  "默认金": [
+    "預設金",
+    "Classic gold"
+  ],
+  "雾蓝": [
+    "霧藍",
+    "Mist blue"
+  ],
+  "青竹": [
+    "青竹",
+    "Bamboo"
+  ],
+  "暮紫": [
+    "暮紫",
+    "Dusk violet"
+  ],
+  "玫瑰": [
+    "玫瑰",
+    "Rose"
+  ],
+  "暖橘": [
+    "暖橘",
+    "Warm amber"
   ]
 }

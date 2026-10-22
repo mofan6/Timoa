@@ -1132,8 +1132,6 @@ dependencies = [
 [[package]]
 name = "femtovg"
 version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31eebf3ab1b76359ccd5f850c07a7c6b2722c64d9127c40e02358e83f3ff9b1a"
 dependencies = [
  "bitflags 2.13.2",
  "bytemuck",
@@ -1147,6 +1145,8 @@ dependencies = [
  "swash",
  "wasm-bindgen",
  "web-sys",
+ "windows",
+ "windows-core",
 ]
 
 [[package]]
@@ -1882,8 +1882,6 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-femtovg"
 version = "1.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb0de504d57cdadf80c2abf7bcb8b7135a3716aee1f41b6ebb90ea93e3649d7c"
 dependencies = [
  "cfg-if",
  "const-field-offset",
@@ -4264,7 +4262,7 @@ dependencies = [
 
 [[package]]
 name = "timoa"
-version = "1.1.5"
+version = "1.2.0"
 dependencies = [
  "chrono",
  "flate2",

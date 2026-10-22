@@ -1,33 +1,34 @@
-import { ScrollView, Palette } from "std-widgets.slint";
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+export { Theme }
 
-export global Theme {
-    in-out property<bool> dark: true;
-    changed dark => { Palette.color-scheme = self.dark ? ColorScheme.dark : ColorScheme.light; }
-    out property<color> bg: dark ? #0a0a0a : #f5f4f0;
-    out property<color> panel: dark ? #141414 : #ffffff;
-    out property<color> card: dark ? #1b1b1b : #ffffff;
-    out property<color> elevated: dark ? #252525 : #eeece6;
-    out property<color> control: dark ? #101010 : #faf9f6;
-    out property<color> hover: dark ? #2c2a25 : #eeeae0;
-    out property<color> pressed: dark ? #363126 : #e4ddcd;
-    out property<color> line: dark ? #343434 : #ddd9d0;
-    out property<color> input-line: dark ? #41403c : #d2cec4;
-    out property<color> text: dark ? #f4f1ec : #29251e;
-    out property<color> muted: dark ? #b0a9a0 : #6b655b;
-    out property<color> faint: dark ? #938d85 : #797267;
-    out property<color> gold: #e3b341;
-    out property<color> accent-text: dark ? #e3b341 : #886218;
-    out property<color> accent-line: dark ? #e3b34150 : #b68a2b55;
-    out property<color> selection: dark ? #e3b3411e : #e3b34122;
-    out property<color> selection-hover: dark ? #e3b34132 : #e3b34138;
-    out property<color> hero: dark ? #1e1c17 : card;
-    out property<color> danger: dark ? #d9736a : #ba4438;
+import "../assets/fonts/SarasaUiSC-Regular.ttf";
+import "../assets/fonts/SarasaUiSC-Bold.ttf";
+
+// Keep the bundled language signal and use the actual Regular/Bold font faces.
+export global Typography {
+    private property<string> language-family: @tr("Microsoft YaHei UI");
+    out property<string> body-family: self.language-family == self.latin-family ? self.latin-family : "Timoa Sarasa UI SC";
+    out property<string> latin-family: "Segoe UI";
+    out property<bool> cjk: self.body-family != self.latin-family;
+    // Sarasa UI SC ships its own Bold face at 700.
+    out property<int> emphasis-weight: self.cjk ? 700 : 600;
+    out property<length> heading-size: 15px;
+    out property<length> control-size: self.cjk ? 14px : 13px;
+    out property<length> caption-size: self.cjk ? 12px : 11px;
+    out property<length> small-size: self.cjk ? 11px : 10px;
 }
+
 
 // Only in-page branding follows the theme. The native window/executable icon
 // continues to use the original asset in both modes.
 export component AppLogo inherits Image {
-    source: Theme.dark ? @image-url("../assets/logo.svg") : @image-url("../assets/logo-light.svg");
+    source: Theme.variant == 1 ? (Theme.dark ? @image-url("../assets/themes/blue-dark.svg") : @image-url("../assets/themes/blue-light.svg"))
+        : Theme.variant == 2 ? (Theme.dark ? @image-url("../assets/themes/bamboo-dark.svg") : @image-url("../assets/themes/bamboo-light.svg"))
+        : Theme.variant == 3 ? (Theme.dark ? @image-url("../assets/themes/violet-dark.svg") : @image-url("../assets/themes/violet-light.svg"))
+        : Theme.variant == 4 ? (Theme.dark ? @image-url("../assets/themes/rose-dark.svg") : @image-url("../assets/themes/rose-light.svg"))
+        : Theme.variant == 5 ? (Theme.dark ? @image-url("../assets/themes/amber-dark.svg") : @image-url("../assets/themes/amber-light.svg"))
+        : Theme.dark ? @image-url("../assets/logo.svg") : @image-url("../assets/logo-light.svg");
 }
 
 export component PageScroll inherits ScrollView {
@@ -95,6 +96,44 @@ export component CaptionButton inherits Rectangle {
     Tooltip { text: @markdown("\{root.label}"); }
 }
 
+export component ThemeSwatch inherits Rectangle {
+    in property<color> swatch;
+    in property<bool> selected;
+    in property<string> label;
+    callback clicked();
+    min-width: 32px; preferred-width: 46px; height: 42px;
+    horizontal-stretch: 1; background: transparent;
+    // Face and outline share one SVG viewport and exactly the same corner
+    // centers. A single colored texture replaces the previous four layers.
+    Image { x: 0px; y: 0px; width: parent.width; height: parent.height;
+        source: root.selected || keys.has-focus ? @image-url("../assets/controls/swatch-selected.svg")
+            : @image-url("../assets/controls/swatch-base.svg");
+        image-fit: fill;
+        colorize: @linear-gradient(135deg, root.swatch.brighter(touch.has-hover ? 16% : 10%) 0%,
+            root.swatch 48%, root.swatch.darker(touch.pressed ? 18% : 8%) 100%);
+        animate colorize { duration: 130ms; easing: ease-out; }
+    }
+    Image { x: (parent.width - 24px) / 2; y: (parent.height - 24px) / 2;
+        width: 24px; height: 24px;
+        source: @image-url("../assets/controls/swatch-marker.svg");
+        opacity: root.selected ? 1 : 0;
+        animate opacity { duration: 130ms; easing: ease-out; }
+    }
+    accessible-role: button; accessible-label: root.label; accessible-checked: root.selected;
+    forward-focus: keys;
+    keys := FocusScope { focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    touch := TouchArea { mouse-cursor: pointer;
+        pointer-event(event) => { if (event.kind == PointerEventKind.down) { keys.focus(); } }
+        clicked => { root.clicked(); }
+    }
+    Tooltip { text: @markdown("\{root.label}"); }
+}
+
 export component PreviewButton inherits Rectangle {
     in property<bool> playing: false;
     in property<bool> enabled: true;
@@ -143,10 +182,12 @@ export component ActionButton inherits Rectangle {
     in property<bool> selected: false;
     in property<bool> navigation: false;
     property<bool> pointer-focus: false;
+    private property<float> navigation-hover-opacity: root.navigation && !root.selected && touch.has-hover ? 1 : 0;
+    animate navigation-hover-opacity { duration: 110ms; easing: ease-out; }
     out property<bool> hovered: touch.has-hover;
     out property<bool> pressed: touch.pressed;
-    in property<length> text-size: 13px;
-    in property<int> text-weight: root.primary ? 500 : 400;
+    in property<length> text-size: Typography.control-size;
+    in property<int> text-weight: 400;
     callback clicked();
     min-width: 48px;
     min-height: 36px;
@@ -155,13 +196,14 @@ export component ActionButton inherits Rectangle {
     border-width: root.navigation || root.selected || keyboard.has-focus ? 0.75px : root.quiet || root.primary ? 0px : 0.8px;
     border-color: root.selected || (keyboard.has-focus && (!root.navigation || !root.pointer-focus)) ? Theme.accent-line : root.navigation ? transparent : Theme.input-line;
     opacity: root.enabled ? 1 : 0.4;
-    // A tab has one persistent selection tint. Mouse press and focus must not
-    // retarget that tint several times while the destination page is created.
-    background: root.navigation ? (root.selected ? Theme.selection : touch.has-hover ? Theme.hover : transparent)
-        : root.primary ? (touch.pressed ? #cba039 : touch.has-hover ? #edc258 : Theme.gold)
+    // Keep the earlier press/focus protection, and commit tab selection in one
+    // frame. Only unselected hover opacity animates; interpolating its opaque
+    // tint into a translucent selection tint can create a short color pulse.
+    background: root.navigation ? (root.selected ? Theme.selection : Theme.hover.with-alpha(root.navigation-hover-opacity))
+        : root.primary ? (touch.pressed ? Theme.accent-pressed : touch.has-hover ? Theme.accent-hover : Theme.accent)
         : touch.pressed ? Theme.pressed : root.selected ? (touch.has-hover ? Theme.selection-hover : Theme.selection)
         : touch.has-hover ? Theme.hover : root.quiet ? transparent : Theme.control;
-    animate background { duration: 110ms; easing: ease-out; }
+    animate background { duration: root.navigation ? 0ms : 110ms; easing: ease-out; }
     accessible-role: button;
     accessible-label: root.label;
     accessible-enabled: root.enabled;
@@ -169,10 +211,10 @@ export component ActionButton inherits Rectangle {
     Text {
         visible: root.chevron == 0;
         text: root.label;
-        font-family: @tr("Microsoft YaHei UI");
+        font-family: Typography.body-family;
         font-size: root.text-size;
         font-weight: root.text-weight;
-        color: root.primary ? #18140b : root.danger ? Theme.danger : Theme.text;
+        color: root.primary ? Theme.on-accent : root.danger ? Theme.danger : Theme.text;
         horizontal-alignment: center;
         vertical-alignment: center;
         overflow: elide;
@@ -231,8 +273,88 @@ export component Field inherits Rectangle {
         font-size: 14px;
         vertical-alignment: center;
         single-line: true;
-        selection-background-color: Theme.gold;
-        selection-foreground-color: #17140c;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: Theme.on-accent;
+    }
+}
+
+export component NameField inherits Rectangle {
+    in-out property<string> value;
+    in property<string> placeholder;
+    in property<bool> enabled: true;
+    in property<[string]> history;
+    callback editing-changed(bool);
+    callback history-requested(length, length, length);
+    property<bool> editing: false;
+    property<length> anchor-x: self.absolute-position.x;
+    property<length> anchor-y: self.absolute-position.y;
+    changed anchor-x => { if (root.editing) { root.request-history(); } }
+    changed anchor-y => { if (root.editing) { root.request-history(); } }
+    changed width => { if (root.editing) { root.request-history(); } }
+    function request-history() {
+        if (root.enabled && root.history.length > 0) {
+            root.history-requested(root.anchor-x, root.anchor-y, root.width);
+        }
+    }
+    // The edit control always occupies exactly 44px. Suggestions are painted
+    // once in the MainWindow overlay, outside all page layouts and clip areas.
+    height: 44px; background: transparent;
+    forward-focus: name-edit;
+    name-edit := Field {
+        x: 0px; y: 0px; width: parent.width; height: 44px;
+        value <=> root.value; placeholder: root.placeholder; enabled: root.enabled;
+        editing-changed(focused) => {
+            root.editing = focused;
+            root.editing-changed(focused);
+            if (focused) { root.request-history(); }
+        }
+    }
+}
+
+export component NameHistoryMenu inherits Rectangle {
+    in property<[string]> names;
+    callback selected(string);
+    callback removed(string);
+    // The compact list needs no title or close control: outside clicks and
+    // Escape already dismiss it without moving or obscuring the real input.
+    height: 16px + min(160px, root.names.length * 40px);
+    background: Theme.card;
+    border-radius: 12px; border-width: 0.8px; border-color: Theme.line;
+    drop-shadow-blur: 9px; drop-shadow-offset-y: 3px;
+    drop-shadow-color: Theme.dark ? #00000040 : #30204012;
+    ScrollView { x: 8px; y: 8px; width: parent.width - 16px; height: parent.height - 16px;
+        horizontal-scrollbar-policy: always-off; mouse-drag-pan-enabled: false; content-width: self.width;
+        VerticalLayout { padding: 0px; padding-right: root.names.length > 4 ? 12px : 0px; spacing: 2px;
+            for name in root.names: Rectangle {
+                height: 38px; border-radius: 7px;
+                background: pick.has-hover ? Theme.hover : transparent;
+                animate background { duration: 100ms; }
+                Image { x: 10px; y: 11px; width: 16px; height: 16px;
+                    source: @image-url("../assets/controls/history-clock.svg");
+                    colorize: pick.has-hover ? Theme.accent-text : Theme.faint;
+                    opacity: pick.has-hover ? 1 : 0.65;
+                }
+                Text { x: 36px; width: parent.width - 74px; height: parent.height;
+                    text: name; color: pick.has-hover ? Theme.accent-text : Theme.muted;
+                    font-size: Typography.control-size; overflow: elide; vertical-alignment: center;
+                    animate color { duration: 100ms; }
+                }
+                pick := TouchArea { width: parent.width - 36px; mouse-cursor: pointer;
+                    clicked => { root.selected(name); } }
+                Rectangle { x: parent.width - 32px; y: 3px; width: 30px; height: 32px; border-radius: 7px;
+                    background: remove-name.has-hover ? Theme.danger.with-alpha(0.08) : transparent;
+                    accessible-role: button; accessible-label: @tr("删除名称");
+                    Image { x: 8px; y: 8px; width: 14px; height: 16px;
+                        source: @image-url("../assets/controls/history-delete.svg");
+                        colorize: remove-name.has-hover ? Theme.danger : Theme.faint;
+                        opacity: remove-name.has-hover ? 1 : 0.4;
+                        animate opacity { duration: 100ms; }
+                    }
+                    remove-name := TouchArea { mouse-cursor: pointer; clicked => { root.removed(name); } }
+                    Tooltip { text: @markdown("\{@tr("删除名称")}"); }
+                }
+            }
+        }
     }
 }
 
@@ -242,20 +364,26 @@ export component Toggle inherits Rectangle {
     in property<bool> enabled: true;
     callback toggled();
     width: 42px; height: 24px;
-    border-radius: 12px;
-    background: root.checked ? Theme.gold : Theme.line;
+    background: transparent;
+    // SVG alpha masks are rasterized at the physical display size, so capsule
+    // and circular edges keep smooth coverage at fractional Windows scaling.
+    Image { x: 0px; y: 0px; width: parent.width; height: parent.height;
+        source: @image-url("../assets/controls/switch-track.svg");
+        colorize: root.checked ? Theme.accent : Theme.line;
+        animate colorize { duration: 150ms; }
+    }
     opacity: root.enabled ? 1 : 0.4;
-    animate background { duration: 150ms; }
     accessible-role: checkbox;
     accessible-label: root.label;
     accessible-checked: root.checked;
     accessible-enabled: root.enabled;
-    Rectangle {
+    Image {
         x: root.checked ? 21px : 3px;
         y: 3px; width: 18px; height: 18px;
-        border-radius: 9px;
-        background: root.checked ? #19150c : #beb9b0;
+        source: @image-url("../assets/controls/switch-thumb.svg");
+        colorize: root.checked ? (Theme.dark ? Theme.on-accent : #ffffff) : Theme.muted;
         animate x { duration: 150ms; easing: ease-out; }
+        animate colorize { duration: 150ms; }
     }
     forward-focus: keyboard;
     keyboard := FocusScope { focus-on-click: false; key-pressed(event) => { if (root.enabled && (event.text == " " || event.text == Key.Return)) { root.toggled(); return accept; } return reject; } }
@@ -290,7 +418,7 @@ export component SelectBox inherits Rectangle {
     opacity: root.enabled ? 1 : 0.45;
     Text { x: 12px; width: parent.width - 44px; height: parent.height;
         text: root.selected >= 0 && root.selected < root.choices.length ? root.choices[root.selected] : @tr("请选择");
-        color: Theme.text; font-size: 13px; vertical-alignment: center; overflow: elide;
+        color: Theme.text; font-size: Typography.control-size; vertical-alignment: center; overflow: elide;
     }
     Text { x: parent.width - 31px; width: 22px; height: parent.height; text: "\u{E70D}";
         font-family: "Segoe MDL2 Assets"; font-size: 10px; color: Theme.muted; vertical-alignment: center; }
@@ -327,10 +455,10 @@ export component SelectBox inherits Rectangle {
                         background: self.hovered ? Theme.selection-hover : index == root.selected ? Theme.selection : transparent;
                         animate background { duration: 140ms; easing: ease-out; }
                         Rectangle { x: 3px; y: 13px; width: 2px; height: 16px; border-radius: 1px;
-                            background: Theme.gold; opacity: index == root.selected ? 1 : 0; animate opacity { duration: 120ms; } }
+                            background: Theme.accent; opacity: index == root.selected ? 1 : 0; animate opacity { duration: 120ms; } }
                         Text { x: parent.hovered ? 15px : 12px; y: 0px;
                             width: parent.width - (root.previewable ? 54px : 25px); height: parent.height;
-                            text: item; color: Theme.text; vertical-alignment: center; overflow: elide; font-size: 13px;
+                            text: item; color: Theme.text; vertical-alignment: center; overflow: elide; font-size: Typography.control-size;
                             animate x { duration: 110ms; easing: ease-out; } }
                         forward-focus: choice-focus;
                         choice-focus := FocusScope { focus-on-click: false; key-pressed(event) => {
@@ -539,8 +667,13 @@ export component DurationPicker inherits Rectangle {
     }
 }
 
-export component SectionTitle inherits Text {
-    color: Theme.text; font-size: 15px; font-weight: 600;
+// Missing bold faces are synthesized by the glyph rasterizer in a single mask.
+export component EmphasisText inherits Text {
+    font-weight: Typography.emphasis-weight;
+}
+
+export component SectionTitle inherits EmphasisText {
+    color: Theme.text; font-size: Typography.heading-size; font-weight: Typography.emphasis-weight;
     height: 26px; vertical-alignment: center;
 }
 

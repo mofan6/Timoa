@@ -1,4 +1,4 @@
-Timoa 1.1.5 / 2026-10-17
+Timoa 1.2.0 / 2026-10-23
 
 应用源码：Apache License 2.0（见 LICENSE）
 界面设计署名：Designed By MOTAN
@@ -9,6 +9,14 @@ https://github.com/malinfossum/tidsro
 
 功能包括倒计时、正计时、精简悬浮窗、闹钟、每周计划、数据迁移、音频导入与 Windows 托盘。
 应用调用的系统字体属于 Windows，不随软件重新分发。
+中文界面使用更纱黑体 Sarasa UI SC 的 Regular / Bold 字库子集，英文采用 Segoe UI。
+Sarasa Gothic Copyright (c) 2015-2025 Renzhi Li 及各上游项目，采用 SIL Open Font License 1.1。
+完整版权声明与许可见 licenses/Sarasa-Gothic-OFL.txt。
+官方来源、原始与裁切文件校验记录见 assets/fonts/manifest.json。
+字库保留界面全部简繁中文与英文用字、适量常用字和常见符号，保留 hinting。
+自定义名称中未内置的字由系统字体补齐；开发构建时可自动补入新增的界面用字。
+裁切后的内部名称为 Timoa Sarasa UI SC，可用 tools/subset-ui-fonts.py 从完整原字体重新生成。
+中文标题采用字体自带的 Bold 字重，文字覆盖图使用 Windows DirectWrite，失败时回退 Swash。
 
 Slint 1.18.1：采用 Slint Royalty-free Desktop, Mobile, and Web Applications
 License 2.0。设置 → 关于中保留官方 AboutSlint 署名组件。
@@ -21,6 +29,8 @@ FFmpeg：应用内包含可替换的音频解码组件，采用 LGPL 2.1 或更�
 不使用网络音频解码，不修改导入的原文件。
 
 其他 Rust 依赖、Windows GNU 运行时的许可见 licenses 目录。
+FemtoVG 的 Windows 字形覆盖适配与原始 MIT 许可见
+licenses/FemtoVG-NOTICE.txt、licenses/FemtoVG-MIT.txt 及 vendor/femtovg。
 单 EXE 已嵌入许可资料，可在设置 → 关于 → 第三方许可证中打开。
 
 发布 EXE 使用官方未修改的 UPX 5.1.0 压缩，GPL-2.0+ 及其压缩程序特别许可。

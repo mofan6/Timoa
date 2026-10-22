@@ -1,7 +1,7 @@
 //! Local focus-page shortcuts. Physical keys work with any input language.
-use crate::{Controller, MainWindow};
+use crate::{Controller, MainWindow, native};
 use slint::{ComponentHandle, winit_030::{WinitWindowAccessor, EventResult, winit::{
-    event::{ElementState, WindowEvent}, keyboard::{KeyCode, ModifiersState, PhysicalKey},
+    event::{ElementState, TouchPhase, WindowEvent}, keyboard::{KeyCode, ModifiersState, PhysicalKey},
 }}};
 use std::{rc::Rc, time::{Duration, Instant}};
 
@@ -46,15 +46,48 @@ fn focus_action(controller: &Controller, start: bool) {
 
 pub fn install(controller: &Controller, ui: &MainWindow) {
     let weak = Rc::downgrade(controller);
+    let input_ui = ui.as_weak();
     let mut sequence = Sequence::default();
     let mut modifiers = ModifiersState::empty();
     // Filter this main window only. No global keyboard hook or extra timer.
     ui.window().on_winit_window_event(move |_, event| {
         match event {
-            WindowEvent::Focused(false) => { sequence.reset(); modifiers = ModifiersState::empty(); }
+            WindowEvent::Focused(false) => {
+                sequence.reset(); modifiers = ModifiersState::empty();
+                if let Some(ui) = input_ui.upgrade() { ui.invoke_dismiss_name_history(); }
+            }
+            WindowEvent::Moved(_) | WindowEvent::Resized(_) => {
+                if let Some(ui) = input_ui.upgrade() { ui.invoke_dismiss_name_history(); }
+            }
             WindowEvent::ModifiersChanged(value) => { modifiers = value.state(); sequence.reset(); }
-            WindowEvent::MouseInput { state: ElementState::Pressed, .. } | WindowEvent::Touch(_) => sequence.reset(),
+            WindowEvent::MouseInput { state: ElementState::Pressed, .. } => {
+                sequence.reset();
+                if let Some(ui) = input_ui.upgrade() {
+                    if let Some(point) = native::pointer_position(ui.window()) {
+                        ui.invoke_name_history_pointer(point.x, point.y);
+                    }
+                }
+            }
+            WindowEvent::MouseWheel { .. } => {
+                if let Some(ui) = input_ui.upgrade() {
+                    if let Some(point) = native::pointer_position(ui.window()) {
+                        ui.invoke_name_history_scroll(point.x, point.y);
+                    }
+                }
+            }
+            WindowEvent::Touch(touch) => {
+                sequence.reset();
+                if touch.phase == TouchPhase::Started {
+                    if let Some(ui) = input_ui.upgrade() {
+                        let scale = ui.window().scale_factor();
+                        ui.invoke_name_history_pointer(touch.location.x as f32 / scale, touch.location.y as f32 / scale);
+                    }
+                }
+            }
             WindowEvent::KeyboardInput { event, is_synthetic, .. } => {
+                if event.state == ElementState::Pressed && event.physical_key == PhysicalKey::Code(KeyCode::Escape) {
+                    if let Some(ui) = input_ui.upgrade() { ui.invoke_dismiss_name_history(); }
+                }
                 let Some(controller) = weak.upgrade() else { return EventResult::Propagate; };
                 let Ok(app) = controller.try_borrow() else { sequence.reset(); return EventResult::Propagate; };
                 let Some(ui) = app.ui.upgrade() else { return EventResult::Propagate; };

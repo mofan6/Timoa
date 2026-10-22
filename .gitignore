@@ -3,3 +3,5 @@
 /preview/
 *.log
 /metadata.json
+__pycache__/
+*.py[cod]

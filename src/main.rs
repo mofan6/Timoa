@@ -32,6 +32,8 @@ struct App {
     day_rows: Rc<VecModel<DayRow>>,
     week_rows: Rc<VecModel<AlarmRow>>,
     focus_bars: Rc<VecModel<FocusBar>>,
+    countdown_names: Rc<VecModel<SharedString>>,
+    alarm_names: Rc<VecModel<SharedString>>,
     week_offset: i64,
     week_day: i32,
     editor: Option<Editor>,
@@ -39,6 +41,8 @@ struct App {
     about: Option<AboutWindow>,
     alerts: VecDeque<Alert>,
     alert: Option<(AlertWindow, Alert)>,
+    clock_alert: Option<(AlertWindow, Alert)>,
+    pending_clock: Option<Alert>,
     sound_owner: Option<String>,
     quit_pending: bool,
     import_notice: String,
@@ -107,23 +111,26 @@ impl App {
             ui.set_heading(i18n::t(&alert.title).into());
             if alert.default_label { ui.set_label(i18n::t(&alert.label).into()); }
         }
+        if let Some((ui, alert)) = &self.clock_alert { ui.set_heading(i18n::t(&alert.title).into()); }
     }
     fn apply_theme(&self) {
         let dark = self.engine.doc.settings.theme == 0;
+        let variant = self.engine.doc.settings.color_theme;
         if let Some(ui) = self.ui.upgrade() {
             native::configure_chrome(ui.window(), false);
-            ui.global::<Theme>().set_dark(dark);
-            ui.set_theme_index(self.engine.doc.settings.theme);
+            ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant);
+            ui.set_theme_index(self.engine.doc.settings.theme); ui.set_color_theme(variant);
             native::theme_frame(ui.window(), None, dark);
             ui.window().request_redraw();
         }
-        self.mini.global::<Theme>().set_dark(dark);
+        self.mini.global::<Theme>().set_dark(dark); self.mini.global::<Theme>().set_variant(variant);
         native::configure_chrome(self.mini.window(), true);
         native::theme_frame(self.mini.window(), None, dark);
         self.mini.window().request_redraw();
-        if let Some((ui, _)) = &self.confirm { ui.global::<Theme>().set_dark(dark); native::theme_frame(ui.window(), None, dark); }
-        if let Some((ui, _)) = &self.alert { ui.global::<Theme>().set_dark(dark); native::theme_frame(ui.window(), None, dark); }
-        if let Some(ui) = &self.about { ui.global::<Theme>().set_dark(dark); native::theme_frame(ui.window(), None, dark); }
+        if let Some((ui, _)) = &self.confirm { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
+        if let Some((ui, _)) = &self.alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
+        if let Some((ui, _)) = &self.clock_alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
+        if let Some(ui) = &self.about { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); native::theme_frame(ui.window(), None, dark); }
     }
     fn set_compact(&mut self, compact: bool) {
         self.commit(); self.compact = compact; self.refresh();
@@ -189,7 +196,7 @@ impl App {
     }
     fn preview(&mut self, choice: i32) {
         let index = self.sound_choice(choice);
-        if self.alert.is_some() || index <= 0 || !self.sound_exists(index) { return; }
+        if self.alert.is_some() || self.clock_alert.is_some() || index <= 0 || !self.sound_exists(index) { return; }
         if self.preview_index == index { self.stop_preview(); return; }
         self.stop_preview();
         let folders = self.folders.clone();
@@ -309,7 +316,11 @@ impl App {
         self.mini.set_upcoming_text(upcoming_text.into());
         ui.set_import_notice(i18n::message(&self.import_notice).into());
         ui.set_language_index(self.engine.doc.settings.language);
-        ui.set_theme_index(self.engine.doc.settings.theme);
+        ui.set_hourly_chime(self.engine.doc.settings.hourly_chime);
+        ui.set_half_hour_chime(self.engine.doc.settings.half_hour_chime);
+        sync_model(&self.countdown_names, self.engine.doc.countdown_names.iter().map(|name| name.as_str().into()).collect());
+        sync_model(&self.alarm_names, self.engine.doc.alarm_names.iter().map(|name| name.as_str().into()).collect());
+        ui.set_theme_index(self.engine.doc.settings.theme); ui.set_color_theme(self.engine.doc.settings.color_theme);
         let focused = self.engine.doc.total_focus_ms / 1000;
         ui.set_total_focus(format!("{:02}:{:02}:{:02}", focused / 3600, focused / 60 % 60, focused % 60).into());
         ui.set_preview_index(if self.preview_index < 0 { -1 } else { self.sound_index(self.preview_index) });
@@ -336,53 +347,55 @@ impl App {
             ui.set_next_time("--:--".into());
             ui.set_next_label(i18n::t("添加一个闹钟，安排下一段时间").into());
         }
-        let monday = now.date_naive() - chrono::Duration::days(now.weekday().num_days_from_monday() as i64)
-            + chrono::Duration::weeks(self.week_offset);
-        let sunday = monday + chrono::Duration::days(6);
-        ui.set_week_title(format!("{} — {}", i18n::date(monday), i18n::date(sunday)).into());
-        ui.set_week_day(self.week_day);
-        let week_items = |day: usize| -> Vec<AlarmRow> {
-            let date = monday + chrono::Duration::days(day as i64);
-            let mut matches: Vec<Alarm> = self.engine.doc.alarms.iter().filter(|a| {
-                if a.days != 0 { a.days & (1 << day) != 0 }
-                else { Local.timestamp_opt(a.fire_at, 0).single().is_some_and(|d| d.date_naive() == date) }
-            }).cloned().collect();
-            matches.sort_by_key(|a| (a.hour, a.minute));
-            matches.iter().map(|a| {
-                let mut row = alarm_row(a);
-                if let Some(end) = a.end_minute { row.time = format!("{:02}:{:02} — {:02}:{:02}", a.hour, a.minute, end / 60, end % 60).into(); }
-                row
-            }).collect()
-        };
-        let days = (0..7).map(|index| {
-            let date = monday + chrono::Duration::days(index as i64);
-            let today = date == now.date_naive();
-            let count = week_items(index).len();
-            DayRow { label: i18n::weekday(index).into(), date: date.day().to_string().into(),
-                count: if today { i18n::t("今天").into() } else if count == 0 { "".into() } else { i18n::message(&format!("{count} 项")).into() }, today }
-        }).collect();
-        sync_model(&self.day_rows, days);
-        sync_model(&self.week_rows, week_items(self.week_day.clamp(0, 6) as usize));
-        let selected_date = monday + chrono::Duration::days(self.week_day.clamp(0, 6) as i64);
-        let key = selected_date.format("%Y-%m-%d").to_string();
-        let day = self.engine.doc.focus_days.iter().find(|day| day.date == key);
-        let hours = day.map(|day| day.hours_ms).unwrap_or([0; 24]);
-        let total = hours.iter().fold(0u64, |total, value| total.saturating_add(*value));
-        let peak = hours.iter().copied().max().unwrap_or(0);
-        let peak_hour = hours.iter().position(|value| *value == peak).unwrap_or(0);
-        ui.set_stats_date(format!("{} · {}", i18n::date(selected_date), i18n::weekday(self.week_day.clamp(0, 6) as usize)).into());
-        ui.set_stats_total(clock_duration(total, false).into());
-        ui.set_stats_rounds(format!("{} {}", day.map(|day| day.rounds).unwrap_or(0), i18n::t("轮完成")).into());
-        ui.set_stats_has_data(total > 0);
-        ui.set_stats_peak(if total == 0 { i18n::t("完成一轮专注后，就会留下记录。").into() }
-            else { format!("{}  {:02}:00–{:02}:00", i18n::t("最专注的时段"), peak_hour, peak_hour + 1).into() });
-        let bars = (0..24).map(|hour| FocusBar {
-            // A fixed one-hour scale makes dates and hours directly comparable.
-            amount: (hours[hour] as f64 / 3_600_000.).clamp(0., 1.) as f32,
-            over_limit: hours[hour] > 3_600_000,
-            detail: format!("{:02}:00–{:02}:00  ·  {}", hour, hour + 1, data::format_duration(hours[hour])).into(),
-        }).collect::<Vec<_>>();
-        sync_model(&self.focus_bars, bars);
+        if ui.get_page() == 2 {
+            let monday = now.date_naive() - chrono::Duration::days(now.weekday().num_days_from_monday() as i64)
+                + chrono::Duration::weeks(self.week_offset);
+            let sunday = monday + chrono::Duration::days(6);
+            ui.set_week_title(format!("{} — {}", i18n::date(monday), i18n::date(sunday)).into());
+            ui.set_week_day(self.week_day);
+            let week_items = |day: usize| -> Vec<AlarmRow> {
+                let date = monday + chrono::Duration::days(day as i64);
+                let mut matches: Vec<Alarm> = self.engine.doc.alarms.iter().filter(|a| {
+                    if a.days != 0 { a.days & (1 << day) != 0 }
+                    else { Local.timestamp_opt(a.fire_at, 0).single().is_some_and(|d| d.date_naive() == date) }
+                }).cloned().collect();
+                matches.sort_by_key(|a| (a.hour, a.minute));
+                matches.iter().map(|a| {
+                    let mut row = alarm_row(a);
+                    if let Some(end) = a.end_minute { row.time = format!("{:02}:{:02} — {:02}:{:02}", a.hour, a.minute, end / 60, end % 60).into(); }
+                    row
+                }).collect()
+            };
+            let days = (0..7).map(|index| {
+                let date = monday + chrono::Duration::days(index as i64);
+                let today = date == now.date_naive();
+                let count = week_items(index).len();
+                DayRow { label: i18n::weekday(index).into(), date: date.day().to_string().into(),
+                    count: if today { i18n::t("今天").into() } else if count == 0 { "".into() } else { i18n::message(&format!("{count} 项")).into() }, today }
+            }).collect();
+            sync_model(&self.day_rows, days);
+            sync_model(&self.week_rows, week_items(self.week_day.clamp(0, 6) as usize));
+            let selected_date = monday + chrono::Duration::days(self.week_day.clamp(0, 6) as i64);
+            let key = selected_date.format("%Y-%m-%d").to_string();
+            let day = self.engine.doc.focus_days.iter().find(|day| day.date == key);
+            let hours = day.map(|day| day.hours_ms).unwrap_or([0; 24]);
+            let total = hours.iter().fold(0u64, |total, value| total.saturating_add(*value));
+            let peak = hours.iter().copied().max().unwrap_or(0);
+            let peak_hour = hours.iter().position(|value| *value == peak).unwrap_or(0);
+            ui.set_stats_date(format!("{} · {}", i18n::date(selected_date), i18n::weekday(self.week_day.clamp(0, 6) as usize)).into());
+            ui.set_stats_total(clock_duration(total, false).into());
+            ui.set_stats_rounds(format!("{} {}", day.map(|day| day.rounds).unwrap_or(0), i18n::t("轮完成")).into());
+            ui.set_stats_has_data(total > 0);
+            ui.set_stats_peak(if total == 0 { i18n::t("完成一轮专注后，就会留下记录。").into() }
+                else { format!("{}  {:02}:00–{:02}:00", i18n::t("最专注的时段"), peak_hour, peak_hour + 1).into() });
+            let bars = (0..24).map(|hour| FocusBar {
+                // A fixed one-hour scale makes dates and hours directly comparable.
+                amount: (hours[hour] as f64 / 3_600_000.).clamp(0., 1.) as f32,
+                over_limit: hours[hour] > 3_600_000,
+                detail: format!("{:02}:00–{:02}:00  ·  {}", hour, hour + 1, data::format_duration(hours[hour])).into(),
+            }).collect::<Vec<_>>();
+            sync_model(&self.focus_bars, bars);
+        }
         ui.set_default_sound(self.sound_index(self.engine.doc.settings.default_sound));
         let has_custom = self.folders.custom().is_file();
         ui.set_has_custom(has_custom);
@@ -413,7 +426,8 @@ impl App {
                 if let Err(error) = self.player.play(alert.sound, &folders) { self.folders.log(&error); }
                 self.sound_owner = Some(alert.token.clone());
             }
-            self.alerts.push_back(alert);
+            if alert.clock_chime { self.pending_clock = Some(alert); }
+            else { self.alerts.push_back(alert); }
         }
     }
     fn close_alert(&mut self) {
@@ -426,7 +440,14 @@ impl App {
         }
     }
     fn clear_alerts(&mut self) {
-        self.close_alert(); self.alerts.clear(); self.player.stop(); self.sound_owner = None;
+        self.close_alert(); self.close_clock_alert(); self.pending_clock = None;
+        self.alerts.clear(); self.player.stop(); self.sound_owner = None;
+    }
+    fn close_clock_alert(&mut self) {
+        if let Some((ui, alert)) = self.clock_alert.take() {
+            if self.sound_owner.as_deref() == Some(alert.token.as_str()) { self.player.stop(); self.sound_owner = None; }
+            let _ = ui.hide();
+        }
     }
     fn discard_cycle_alerts(&mut self, id: &str) {
         let sounding = self.alerts.iter().chain(self.alert.as_ref().map(|(_, alert)| alert))
@@ -469,6 +490,7 @@ fn present_alert(controller: &Controller) {
     controller.borrow_mut().stop_preview();
     let Ok(ui) = AlertWindow::new() else { return; };
     ui.global::<Theme>().set_dark(controller.borrow().engine.doc.settings.theme == 0);
+    ui.global::<Theme>().set_variant(controller.borrow().engine.doc.settings.color_theme);
     ui.set_heading(i18n::t(&alert.title).into());
     ui.set_label(if alert.default_label { i18n::t(&alert.label).into() } else { alert.label.clone().into() });
     ui.set_warning(alert.warning); ui.set_countdown(alert.countdown);
@@ -499,6 +521,32 @@ fn present_alert(controller: &Controller) {
         let mut app = controller.borrow_mut();
         app.alert = Some((ui, alert)); app.refresh_alert_options();
     }
+}
+
+fn present_clock_alert(controller: &Controller) {
+    let alert = {
+        let mut state = controller.borrow_mut();
+        let Some(alert) = state.pending_clock.take() else { return; };
+        state.close_clock_alert(); alert
+    };
+    let Ok(ui) = AlertWindow::new() else { return; };
+    ui.set_clock_chime(true); ui.set_heading(i18n::t(&alert.title).into()); ui.set_label(alert.label.clone().into());
+    let dark = controller.borrow().engine.doc.settings.theme == 0;
+    ui.global::<Theme>().set_dark(dark);
+    ui.global::<Theme>().set_variant(controller.borrow().engine.doc.settings.color_theme);
+    let weak = Rc::downgrade(controller);
+    ui.on_dismiss(move || { if let Some(app) = weak.upgrade() { app.borrow_mut().close_clock_alert(); } });
+    let weak = Rc::downgrade(controller);
+    ui.window().on_close_requested(move || {
+        if let Some(app) = weak.upgrade() { app.borrow_mut().close_clock_alert(); }
+        slint::CloseRequestResponse::HideWindow
+    });
+    let parent = controller.borrow().ui.upgrade();
+    {
+        let state = controller.borrow();
+        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|main| main.window()) }, dark);
+    }
+    controller.borrow_mut().clock_alert = Some((ui, alert));
 }
 
 fn start_quick_round(controller: &Controller, seconds: u64) {
@@ -572,6 +620,7 @@ fn confirm(controller: &Controller, action: Confirmation) {
     if let Some((window, _)) = &controller.borrow().confirm { native::show(window.window()); return; }
     let Ok(ui) = ConfirmWindow::new() else { return; };
     ui.global::<Theme>().set_dark(controller.borrow().engine.doc.settings.theme == 0);
+    ui.global::<Theme>().set_variant(controller.borrow().engine.doc.settings.color_theme);
     match &action {
         Confirmation::Import(document) => {
             ui.set_heading(i18n::t("导入这份备份？").into()); ui.set_action_label(i18n::t("导入备份").into());
@@ -627,7 +676,8 @@ fn confirm(controller: &Controller, action: Confirmation) {
             Confirmation::Clear => {
                 let mut settings = state.engine.doc.settings.clone(); settings.focus_timer_id.clear();
                 state.clear_alerts();
-                state.engine = Engine::new(Document { settings, total_focus_ms: state.engine.doc.total_focus_ms, focus_days: state.engine.doc.focus_days.clone(), focus_stats_initialized: true, ..Document::default() }, i18n::t("已清除全部计划。").into());
+                state.engine = Engine::new(Document { settings, total_focus_ms: state.engine.doc.total_focus_ms, focus_days: state.engine.doc.focus_days.clone(), focus_stats_initialized: true,
+                    countdown_names: state.engine.doc.countdown_names.clone(), alarm_names: state.engine.doc.alarm_names.clone(), name_history_initialized: true, ..Document::default() }, i18n::t("已清除全部计划。").into());
             }
             Confirmation::Reset => {
                 if let Err(error) = native::startup(false) { state.engine.message = error; state.refresh(); return; }
@@ -703,6 +753,7 @@ fn about(controller: &Controller) {
     ui.set_version_text(format!("{}  ·  Windows 7–11  ·  {}", env!("CARGO_PKG_VERSION"),
         if cfg!(target_arch = "x86") { "x86" } else { "x64" }).into());
     ui.global::<Theme>().set_dark(controller.borrow().engine.doc.settings.theme == 0);
+    ui.global::<Theme>().set_variant(controller.borrow().engine.doc.settings.color_theme);
     let parent = controller.borrow().ui.upgrade();
     let weak = Rc::downgrade(controller);
     ui.on_dismiss_about(move || { if let Some(app) = weak.upgrade() { if let Some(window) = app.borrow_mut().about.take() { let _ = window.hide(); } } });
@@ -714,7 +765,10 @@ fn about(controller: &Controller) {
         let path = folders.roaming.join("licenses/Third-party-licenses.txt");
         let mut text = concat!("Timoa\r\nApache License 2.0\r\n\r\n",
             include_str!("../licenses/Apache-2.0.txt"), "\r\n\r\nSlint\r\n",
-            include_str!("../licenses/Slint-Royalty-free-2.0.md"), "\r\n\r\nFFmpeg\r\n",
+            include_str!("../licenses/Slint-Royalty-free-2.0.md"), "\r\n\r\nFemtoVG\r\n",
+            include_str!("../licenses/FemtoVG-NOTICE.txt"), "\r\n\r\n",
+            include_str!("../licenses/FemtoVG-MIT.txt"), "\r\n\r\nSarasa Gothic / Sarasa UI SC\r\n",
+            include_str!("../licenses/Sarasa-Gothic-OFL.txt"), "\r\n\r\nFFmpeg\r\n",
             include_str!("../licenses/FFmpeg-NOTICE.txt"), "\r\n\r\nMinGW-w64 runtime\r\n",
             include_str!("../licenses/MinGW-w64-runtime.txt"), "\r\n\r\nUPX executable compression\r\n",
             include_str!("../licenses/UPX-License.txt"), "\r\n\r\n",
@@ -781,6 +835,19 @@ fn bind(controller: &Controller, ui: &MainWindow) {
         let mut app = app.borrow_mut(); let enabled = !app.engine.doc.settings.auto_cycle;
         app.engine.set_auto_cycle(enabled); app.commit(); app.refresh();
     });
+    action!(on_change_hourly_chime, |app| {
+        let mut app = app.borrow_mut(); app.engine.doc.settings.hourly_chime = !app.engine.doc.settings.hourly_chime;
+        app.commit(); app.refresh();
+    });
+    action!(on_change_half_hour_chime, |app| {
+        let mut app = app.borrow_mut(); app.engine.doc.settings.half_hour_chime = !app.engine.doc.settings.half_hour_chime;
+        app.commit(); app.refresh();
+    });
+    action!(on_delete_name, |app, kind, name| {
+        let mut app = app.borrow_mut();
+        let history = if kind == 0 { &mut app.engine.doc.countdown_names } else { &mut app.engine.doc.alarm_names };
+        history.retain(|item| item != name.as_str()); app.commit(); app.refresh();
+    });
     action!(on_change_cycle_interval, |app, seconds| {
         let mut app = app.borrow_mut(); app.engine.doc.settings.cycle_interval_seconds = seconds.clamp(0, 3600) as u64;
         app.commit(); app.refresh();
@@ -831,6 +898,7 @@ fn bind(controller: &Controller, ui: &MainWindow) {
     action!(on_editor_save, |app| { save_editor(&app); });
     action!(on_editor_cancel, |app| { let mut app = app.borrow_mut(); app.editor = None; if let Some(ui) = app.ui.upgrade() { ui.set_editor_visible(false); } });
     action!(on_change_theme, |app, index| { let mut app = app.borrow_mut(); app.engine.doc.settings.theme = index.clamp(0, 1); app.apply_theme(); app.commit(); });
+    action!(on_change_color_theme, |app, index| { let mut app = app.borrow_mut(); app.engine.doc.settings.color_theme = index.clamp(0, 5); app.apply_theme(); app.commit(); });
     action!(on_preview_sound, |app, index| { app.borrow_mut().preview(index); });
     action!(on_choose_week, |app, day| { let mut app = app.borrow_mut(); app.week_day = day.clamp(0, 6); app.refresh(); });
     action!(on_change_week, |app, offset| { let mut app = app.borrow_mut(); app.week_offset = (app.week_offset + offset as i64).clamp(-520, 520); app.refresh(); });
@@ -882,7 +950,7 @@ fn bind(controller: &Controller, ui: &MainWindow) {
     let hint_weak = ui.as_weak();
     ui.on_info_hint(move |kind, visible| {
         if let Some(ui) = hint_weak.upgrade() {
-            let visible = visible && ui.get_page() == 3 && ui.get_more_settings_open();
+            let visible = visible && ui.get_page() == 3 && (kind == 3 || ui.get_more_settings_open());
             if visible {
                 ui.set_hint_kind(kind);
                 if let Some(position) = native::pointer_position(ui.window()) {
@@ -943,13 +1011,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let timer_rows = Rc::new(VecModel::<TimerRow>::default()); let alarm_rows = Rc::new(VecModel::<AlarmRow>::default());
     let day_rows = Rc::new(VecModel::<DayRow>::default()); let week_rows = Rc::new(VecModel::<AlarmRow>::default());
     let focus_bars = Rc::new(VecModel::<FocusBar>::default());
+    let countdown_names = Rc::new(VecModel::<SharedString>::default());
+    let alarm_names = Rc::new(VecModel::<SharedString>::default());
     ui.set_timers(timer_rows.clone().into()); ui.set_alarms(alarm_rows.clone().into());
     ui.set_week_days(day_rows.clone().into()); ui.set_week_items(week_rows.clone().into());
     ui.set_focus_bars(focus_bars.clone().into());
+    ui.set_countdown_names(countdown_names.clone().into()); ui.set_alarm_names(alarm_names.clone().into());
     let app = Rc::new(RefCell::new(App { ui: ui.as_weak(), mini, compact: false, mini_positioned: false, engine: Engine::new(document, message), folders,
-        player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, focus_bars, week_offset: 0,
+        player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, focus_bars, countdown_names, alarm_names, week_offset: 0,
         week_day: Local::now().weekday().num_days_from_monday() as i32, editor: None, confirm: None, about: None,
-        alerts: VecDeque::new(), alert: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
+        alerts: VecDeque::new(), alert: None, clock_alert: None, pending_clock: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
         message_seen: String::new(), message_deadline: None }));
     app.borrow().restore_focus_draft();
     app.borrow().refresh_sound_library(); ui.set_draft_sound(app.borrow().sound_index(app.borrow().engine.doc.settings.default_sound)); bind(&app, &ui); app.borrow().apply_theme(); app.borrow_mut().refresh();
@@ -994,6 +1065,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if app.quit_pending { app.request_quit(); }
         }
         if app.preview_deadline.is_some_and(|deadline| Instant::now() >= deadline) { app.stop_preview(); }
+        app.player.release_finished();
         if app.message_deadline.is_some_and(|deadline| Instant::now() >= deadline) { app.engine.message.clear(); app.refresh(); }
         let (alerts, changed) = app.engine.tick();
         for id in app.engine.take_cycle_restarts() { app.discard_cycle_alerts(&id); }
@@ -1009,8 +1081,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 i18n::t("关闭窗口后，在托盘中继续计时").into()
             } else { i18n::t("快捷键被占用，可从托盘唤起").into() }); }
         }
-        let show_alert = app.alert.is_none() && !app.alerts.is_empty(); drop(app);
+        let show_alert = app.alert.is_none() && !app.alerts.is_empty();
+        let show_clock = app.pending_clock.is_some(); drop(app);
         if show_alert { present_alert(&controller); }
+        if show_clock { present_clock_alert(&controller); }
     });
     slint::run_event_loop_until_quit()?;
     app.borrow_mut().commit(); drop(timer); drop(bridge); Ok(())
