@@ -19,11 +19,11 @@ Slint 的系统字体查询同样动态检测 SystemParametersInfoForDpi；新�
 
 ## 固定工具链
 
-Rust 1.99.0 x86_64-pc-windows-gnu、rust-src、i686-pc-windows-gnu 启动对象与完整 x86 MinGW CRT；Slint 1.18.1 与锁定依赖；w64devkit 2.10.1、NSIS、可选 UPX 5.1.0。
+Rust 1.99.0 x86_64-pc-windows-gnu、rust-src、i686-pc-windows-gnu 启动对象与完整 x86 MinGW CRT；Slint 1.18.1 与锁定依赖；w64devkit 2.10.1、NSIS。
 
 ```powershell
 $env:CARGO_TARGET_DIR = 'D:\TimoaBuild\target'
-.\build.ps1 -Architecture All -Setup -ToolchainBin 'D:\w64devkit\bin' -NsisCompiler 'D:\w64devkit\share\nsis\Bin\makensis.exe' -Upx 'D:\upx\upx.exe'
+.\build.ps1 -Architecture All -Setup -ToolchainBin 'D:\w64devkit\bin' -NsisCompiler 'D:\w64devkit\share\nsis\Bin\makensis.exe'
 ```
 
 内部以 x86_64-win7-windows-gnu / i686-win7-windows-gnu 目标从 rust-src 编译标准库。目标名说明最低系统基线，对外文件只按 windows-x64 / windows-x86 分类。

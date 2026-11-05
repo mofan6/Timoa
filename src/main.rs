@@ -40,8 +40,12 @@ struct App {
     confirm: Option<(ConfirmWindow, Confirmation)>,
     about: Option<AboutWindow>,
     alerts: VecDeque<Alert>,
-    alert: Option<(AlertWindow, Alert)>,
-    clock_alert: Option<(AlertWindow, Alert)>,
+    // One reminder window, created on first use and then reused. A Slint window
+    // owns a full render surface and scene graph, so allocating a fresh one per
+    // reminder both spikes memory and fragments the allocator.
+    alert_ui: Option<AlertWindow>,
+    alert: Option<Alert>,
+    clock_alert: Option<Alert>,
     pending_clock: Option<Alert>,
     sound_owner: Option<String>,
     quit_pending: bool,
@@ -107,11 +111,13 @@ impl App {
             ui.set_message(i18n::message(ui.get_message().as_str()).into());
             ui.set_action_label(i18n::message(ui.get_action_label().as_str()).into());
         }
-        if let Some((ui, alert)) = &self.alert {
-            ui.set_heading(i18n::t(&alert.title).into());
-            if alert.default_label { ui.set_label(i18n::t(&alert.label).into()); }
+        if let Some(ui) = &self.alert_ui {
+            if let Some(alert) = &self.alert {
+                ui.set_heading(i18n::t(&alert.title).into());
+                if alert.default_label { ui.set_label(i18n::t(&alert.label).into()); }
+            }
+            if let Some(alert) = &self.clock_alert { ui.set_heading(i18n::t(&alert.title).into()); }
         }
-        if let Some((ui, alert)) = &self.clock_alert { ui.set_heading(i18n::t(&alert.title).into()); }
     }
     fn apply_theme(&self) {
         let dark = self.engine.doc.settings.theme == 0;
@@ -128,8 +134,11 @@ impl App {
         apply_native_theme(&self.mini, None);
         self.mini.window().request_redraw();
         if let Some((ui, _)) = &self.confirm { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
-        if let Some((ui, _)) = &self.alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
-        if let Some((ui, _)) = &self.clock_alert { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
+        if let Some(ui) = &self.alert_ui {
+            if self.alert.is_some() || self.clock_alert.is_some() {
+                ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None);
+            }
+        }
         if let Some(ui) = &self.about { ui.global::<Theme>().set_dark(dark); ui.global::<Theme>().set_variant(variant); apply_native_theme(ui, None); }
     }
     fn set_compact(&mut self, compact: bool) {
@@ -406,7 +415,7 @@ impl App {
         if let Some(job) = &self.import { ui.set_import_progress(job.started.elapsed().as_secs_f32().fract()); }
     }
     fn refresh_alert_options(&self) {
-        if let Some((ui, _)) = &self.alert {
+        if let Some(ui) = &self.alert_ui {
             let labels = self.engine.doc.settings.quick_snooze_seconds.iter()
                 .map(|seconds| format!("+ {}", delay_label(*seconds)).into()).collect::<Vec<SharedString>>();
             let current = ui.get_quick_labels();
@@ -431,12 +440,12 @@ impl App {
         }
     }
     fn close_alert(&mut self) {
-        if let Some((ui, alert)) = self.alert.take() {
+        if let Some(alert) = self.alert.take() {
             // Dismissing an older window must not stop the sound of a newer reminder.
             if self.sound_owner.as_deref() == Some(alert.token.as_str()) {
                 self.player.stop(); self.sound_owner = None;
             }
-            let _ = ui.hide();
+            if let Some(ui) = &self.alert_ui { let _ = ui.hide(); }
         }
     }
     fn clear_alerts(&mut self) {
@@ -444,17 +453,22 @@ impl App {
         self.alerts.clear(); self.player.stop(); self.sound_owner = None;
     }
     fn close_clock_alert(&mut self) {
-        if let Some((ui, alert)) = self.clock_alert.take() {
+        if let Some(alert) = self.clock_alert.take() {
             if self.sound_owner.as_deref() == Some(alert.token.as_str()) { self.player.stop(); self.sound_owner = None; }
-            let _ = ui.hide();
+            if let Some(ui) = &self.alert_ui { let _ = ui.hide(); }
         }
     }
+    /// The reminder window is shared by timer and clock alerts, so a dismissal
+    /// closes whichever kind is currently on screen.
+    fn dismiss_alert(&mut self) {
+        if self.alert.is_some() { self.close_alert(); } else { self.close_clock_alert(); }
+    }
     fn discard_cycle_alerts(&mut self, id: &str) {
-        let sounding = self.alerts.iter().chain(self.alert.as_ref().map(|(_, alert)| alert))
+        let sounding = self.alerts.iter().chain(self.alert.as_ref())
             .any(|alert| alert.countdown && alert.id == id && self.sound_owner.as_deref() == Some(alert.token.as_str()));
         if sounding { self.player.stop(); self.sound_owner = None; }
         self.alerts.retain(|alert| !alert.countdown || alert.id != id);
-        if self.alert.as_ref().is_some_and(|(_, alert)| alert.countdown && alert.id == id) { self.close_alert(); }
+        if self.alert.as_ref().is_some_and(|alert| alert.countdown && alert.id == id) { self.close_alert(); }
     }
     fn request_quit(&mut self) {
         self.commit();
@@ -492,22 +506,14 @@ where for<'a> Theme<'a>: slint::Global<'a, C> {
     });
 }
 
-fn present_alert(controller: &Controller) {
-    let alert = {
-        let mut app = controller.borrow_mut();
-        if app.alert.is_some() { return; }
-        app.alerts.pop_front()
-    };
-    let Some(alert) = alert else { return; };
-    controller.borrow_mut().stop_preview();
-    let Ok(ui) = AlertWindow::new() else { return; };
-    ui.global::<Theme>().set_dark(controller.borrow().engine.doc.settings.theme == 0);
-    ui.global::<Theme>().set_variant(controller.borrow().engine.doc.settings.color_theme);
-    ui.set_heading(i18n::t(&alert.title).into());
-    ui.set_label(if alert.default_label { i18n::t(&alert.label).into() } else { alert.label.clone().into() });
-    ui.set_warning(alert.warning); ui.set_countdown(alert.countdown);
+/// Creates the reminder window on first use and reuses it for every later
+/// reminder. Callbacks are wired once and read the live state through the
+/// controller, so the same window can serve timer and clock alerts.
+fn ensure_alert_window(controller: &Controller) -> Option<AlertWindow> {
+    if let Some(ui) = controller.borrow().alert_ui.as_ref().map(|ui| ui.clone_strong()) { return Some(ui); }
+    let ui = AlertWindow::new().ok()?;
     let weak = Rc::downgrade(controller);
-    ui.on_dismiss(move || { if let Some(app) = weak.upgrade() { app.borrow_mut().close_alert(); present_alert(&app); } });
+    ui.on_dismiss(move || { if let Some(app) = weak.upgrade() { app.borrow_mut().dismiss_alert(); present_alert(&app); } });
     let weak = Rc::downgrade(controller);
     ui.on_quick_round(move |index| { if let Some(app) = weak.upgrade() {
         let seconds = app.borrow().engine.doc.settings.quick_snooze_seconds.get(index.max(0) as usize).copied();
@@ -515,55 +521,73 @@ fn present_alert(controller: &Controller) {
     } });
     let weak = Rc::downgrade(controller);
     ui.on_restart(move || { if let Some(app) = weak.upgrade() {
-        let mut state = app.borrow_mut(); let id = state.alert.as_ref().map(|(_, a)| a.id.clone());
+        let mut state = app.borrow_mut(); let id = state.alert.as_ref().map(|alert| alert.id.clone());
         if let Some(id) = id { state.engine.timer_action(&id, "reset"); }
         state.close_alert(); state.commit(); state.refresh(); drop(state); present_alert(&app);
     } });
     let weak = Rc::downgrade(controller);
     ui.window().on_close_requested(move || {
-        if let Some(app) = weak.upgrade() { app.borrow_mut().close_alert(); present_alert(&app); }
+        if let Some(app) = weak.upgrade() { app.borrow_mut().dismiss_alert(); present_alert(&app); }
         slint::CloseRequestResponse::HideWindow
     });
+    controller.borrow_mut().alert_ui = Some(ui.clone_strong());
+    Some(ui)
+}
+
+fn show_alert_window(controller: &Controller, ui: &AlertWindow) {
     let parent = controller.borrow().ui.upgrade();
+    let state = controller.borrow();
+    show_owned(ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|main| main.window()) });
+}
+
+fn present_alert(controller: &Controller) {
+    let alert = {
+        let mut app = controller.borrow_mut();
+        if app.alert.is_some() || app.clock_alert.is_some() { return; }
+        app.alerts.pop_front()
+    };
+    let Some(alert) = alert else { return; };
+    controller.borrow_mut().stop_preview();
+    let Some(ui) = ensure_alert_window(controller) else { return; };
     {
-        let state = controller.borrow();
-        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|p| p.window()) });
+        let app = controller.borrow();
+        ui.global::<Theme>().set_dark(app.engine.doc.settings.theme == 0);
+        ui.global::<Theme>().set_variant(app.engine.doc.settings.color_theme);
     }
+    ui.set_clock_chime(false);
+    ui.set_heading(i18n::t(&alert.title).into());
+    ui.set_label(if alert.default_label { i18n::t(&alert.label).into() } else { alert.label.clone().into() });
+    ui.set_warning(alert.warning); ui.set_countdown(alert.countdown);
     {
         let mut app = controller.borrow_mut();
-        app.alert = Some((ui, alert)); app.refresh_alert_options();
+        app.alert = Some(alert); app.refresh_alert_options();
     }
+    show_alert_window(controller, &ui);
 }
 
 fn present_clock_alert(controller: &Controller) {
     let alert = {
         let mut state = controller.borrow_mut();
+        // The shared window shows one reminder at a time; the tick loop retries.
+        if state.alert.is_some() { return; }
         let Some(alert) = state.pending_clock.take() else { return; };
         state.close_clock_alert(); alert
     };
-    let Ok(ui) = AlertWindow::new() else { return; };
-    ui.set_clock_chime(true); ui.set_heading(i18n::t(&alert.title).into()); ui.set_label(alert.label.clone().into());
-    let dark = controller.borrow().engine.doc.settings.theme == 0;
-    ui.global::<Theme>().set_dark(dark);
-    ui.global::<Theme>().set_variant(controller.borrow().engine.doc.settings.color_theme);
-    let weak = Rc::downgrade(controller);
-    ui.on_dismiss(move || { if let Some(app) = weak.upgrade() { app.borrow_mut().close_clock_alert(); } });
-    let weak = Rc::downgrade(controller);
-    ui.window().on_close_requested(move || {
-        if let Some(app) = weak.upgrade() { app.borrow_mut().close_clock_alert(); }
-        slint::CloseRequestResponse::HideWindow
-    });
-    let parent = controller.borrow().ui.upgrade();
+    let Some(ui) = ensure_alert_window(controller) else { return; };
     {
-        let state = controller.borrow();
-        show_owned(&ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|main| main.window()) });
+        let app = controller.borrow();
+        ui.global::<Theme>().set_dark(app.engine.doc.settings.theme == 0);
+        ui.global::<Theme>().set_variant(app.engine.doc.settings.color_theme);
     }
-    controller.borrow_mut().clock_alert = Some((ui, alert));
+    ui.set_clock_chime(true); ui.set_heading(i18n::t(&alert.title).into()); ui.set_label(alert.label.clone().into());
+    ui.set_warning(false); ui.set_countdown(false);
+    controller.borrow_mut().clock_alert = Some(alert);
+    show_alert_window(controller, &ui);
 }
 
 fn start_quick_round(controller: &Controller, seconds: u64) {
     let mut state = controller.borrow_mut();
-    let Some((_, alert)) = &state.alert else { return; };
+    let Some(alert) = &state.alert else { return; };
     let alert = alert.clone();
     let seconds = seconds.clamp(1, 5999);
     if alert.countdown {
@@ -777,14 +801,10 @@ fn about(controller: &Controller) {
         let path = folders.roaming.join("licenses/Third-party-licenses.txt");
         let mut text = concat!("Timoa\r\nApache License 2.0\r\n\r\n",
             include_str!("../licenses/Apache-2.0.txt"), "\r\n\r\nSlint\r\n",
-            include_str!("../licenses/Slint-Royalty-free-2.0.md"), "\r\n\r\nFemtoVG\r\n",
-            include_str!("../licenses/FemtoVG-NOTICE.txt"), "\r\n\r\n",
-            include_str!("../licenses/FemtoVG-MIT.txt"), "\r\n\r\nSarasa Gothic / Sarasa UI SC\r\n",
+            include_str!("../licenses/Slint-Royalty-free-2.0.md"), "\r\n\r\nSarasa Gothic / Sarasa UI SC\r\n",
             include_str!("../licenses/Sarasa-Gothic-OFL.txt"), "\r\n\r\nFFmpeg\r\n",
             include_str!("../licenses/FFmpeg-NOTICE.txt"), "\r\n\r\nMinGW-w64 runtime\r\n",
-            include_str!("../licenses/MinGW-w64-runtime.txt"), "\r\n\r\nUPX executable compression\r\n",
-            include_str!("../licenses/UPX-License.txt"), "\r\n\r\n",
-            include_str!("../licenses/UPX-GPL-2.0.txt")).to_owned();
+            include_str!("../licenses/MinGW-w64-runtime.txt")).to_owned();
         let mut rust_notices = String::new();
         use std::io::Read;
         let _ = flate2::read::GzDecoder::new(include_bytes!("../licenses/Rust-dependencies.txt.gz").as_slice()).read_to_string(&mut rust_notices);
@@ -1008,7 +1028,10 @@ fn bind(controller: &Controller, ui: &MainWindow) {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let startup = std::env::args().any(|s| s == "--startup");
     let Some(_instance) = native::Instance::claim(!startup).map_err(std::io::Error::other)? else { return Ok(()); };
-    slint::BackendSelector::new().backend_name("winit".into()).select()?;
+    // Software rasterizer only: no OpenGL driver context per window. On Windows
+    // a WGL context costs tens of megabytes of driver-private memory, which
+    // dwarfs everything this app itself allocates.
+    slint::BackendSelector::new().backend_name("winit-software".into()).select()?;
     let folders = Folders::system();
     let (mut document, message) = data::load(&folders);
     document.settings.startup = native::startup_enabled();
@@ -1032,7 +1055,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let app = Rc::new(RefCell::new(App { ui: ui.as_weak(), mini, compact: false, mini_positioned: false, engine: Engine::new(document, message), folders,
         player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, focus_bars, countdown_names, alarm_names, week_offset: 0,
         week_day: Local::now().weekday().num_days_from_monday() as i32, editor: None, confirm: None, about: None,
-        alerts: VecDeque::new(), alert: None, clock_alert: None, pending_clock: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
+        alerts: VecDeque::new(), alert_ui: None, alert: None, clock_alert: None, pending_clock: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
         message_seen: String::new(), message_deadline: None }));
     app.borrow().restore_focus_draft();
     app.borrow().refresh_sound_library(); ui.set_draft_sound(app.borrow().sound_index(app.borrow().engine.doc.settings.default_sound)); bind(&app, &ui); app.borrow().apply_theme(); app.borrow_mut().refresh();

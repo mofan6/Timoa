@@ -2,8 +2,7 @@ param(
     [ValidateSet('x64','x86','All')][string]$Architecture='All',
     [switch]$Setup,
     [string]$ToolchainBin,
-    [string]$NsisCompiler,
-    [string]$Upx
+    [string]$NsisCompiler
 )
 $ErrorActionPreference='Stop'
 Set-Location -LiteralPath $PSScriptRoot
@@ -69,10 +68,8 @@ foreach ($taskArch in $taskArchitectures) {
     New-Item -ItemType Directory -Path $taskDist -Force | Out-Null
     $taskExe=Join-Path $taskDist "Timoa-$taskPackageVersion-windows-$taskArch.exe"
     Copy-Item -LiteralPath (Join-Path $taskTargetDir "$taskTarget\release\Timoa.exe") -Destination $taskExe -Force
-    if ($Upx) {
-        & $Upx --best --lzma --compress-icons=0 --strip-relocs=0 $taskExe
-        if ($LASTEXITCODE -ne 0) { throw "$taskArch executable compression failed." }
-    }
+    # No UPX: packing trades ~8 MB of disk for ~19 MB of private commit, because
+    # the stub decompresses the whole image into process memory at startup.
     if ($Setup) {
         if (!$NsisCompiler) {
             $taskNsis=Get-Command makensis.exe -ErrorAction SilentlyContinue

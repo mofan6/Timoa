@@ -57,7 +57,12 @@ fn main() {
         // Embed images and common-character subsets of Sarasa UI SC fonts.
         // Keep vector outlines available for dynamic text and native rasterization.
         .embed_resources(slint_build::EmbedResourcesKind::EmbedFiles)).expect("Slint UI compilation");
-    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
+    // `TIMO_SKIP_RESOURCES` lets `cargo check` run on hosts without the Windows
+    // SDK resource compiler. Release builds must not set it: the icon, version
+    // info and DPI manifest would be missing from the executable.
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
+        && std::env::var_os("TIMO_SKIP_RESOURCES").is_none()
+    {
         if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("gnu") {
             // Rust's bundled MinGW CRT omits this Windows shell import library.
             // Copy only the import library so an unrelated compiler CRT is never linked.
