@@ -1,4 +1,4 @@
-Timoa 1.2.0 / 2026-10-23
+Timoa 1.3.0 / 2026-11-08
 
 应用源码：Apache License 2.0（见 LICENSE）
 界面设计署名：Designed By MOTAN
@@ -29,12 +29,15 @@ FFmpeg：应用内包含可替换的音频解码组件，采用 LGPL 2.1 或更�
 不使用网络音频解码，不修改导入的原文件。
 
 其他 Rust 依赖、Windows GNU 运行时的许可见 licenses 目录。
-本版使用 Slint 软件光栅渲染器，不再链接 FemtoVG / OpenGL 后端。
+默认发布使用 Slint 软件光栅渲染器，不链接 FemtoVG / OpenGL 后端，保留读屏支持。
+软件字体适配说明见 vendor/i-slint-renderer-software/Timoa-NATIVE-FONTS.md。
+源码可通过 gpu 特性另行构建 FemtoVG 后端，使用 --renderer=gpu 选择；
+对应许可见 licenses/FemtoVG-MIT.txt 和 licenses/FemtoVG-NOTICE.txt。
 单 EXE 已嵌入许可资料，可在设置 → 关于 → 第三方许可证中打开。
 
 发布 EXE 不做可执行文件压缩，直接分发链接器产出的原生 PE。
 
-安装程序使用 NSIS / Modern UI 2 和 zlib 压缩，许可见 licenses/NSIS.txt。
+安装程序使用 NSIS / Modern UI 2 和 LZMA 固实压缩，许可见 licenses/NSIS.txt。
 本版打包器为 w64devkit 2.10.1 随附的 NSIS，版本标识 11-Oct-2026.cvs。
 沿用素材的 Apache 版权声明见 licenses/Apache-2.0.txt。
 
@@ -44,5 +47,5 @@ Windows compatibility source copy / 2026-10-16:
 - Local Slint winit-backend patch: dynamic DPI API with Win7 system-metrics fallback.
 - Upstream copyright and license notices are retained in vendor/ and licenses/.
 - x86 audio decoder notices: licenses/FFmpeg-Win7-x86-NOTICE.txt.
-- Application behavior/layout are inherited from the regular 1.1.0 release.
+- One maintained source tree supplies both architectures and the same UI/behavior.
 - Compilation and static PE/source inspection only; Windows 7 runtime not verified.

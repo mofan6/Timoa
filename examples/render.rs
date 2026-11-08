@@ -47,6 +47,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     i18n::select(language); ui.set_language_index(language);
     let light = std::env::args().nth(3).is_some_and(|v| v == "light");
     ui.global::<Theme>().set_dark(!light); ui.set_theme_index(if light {1} else {0});
+    let variant = std::env::args().nth(4).and_then(|v| v.parse::<i32>().ok()).unwrap_or(0).clamp(0, 5);
+    ui.global::<Theme>().set_variant(variant);
+    ui.set_color_theme(variant);
     ui.set_total_focus("126:45:30".into());
     ui.set_clock_text("09:41".into()); ui.set_date_text(format!("{} · {}", i18n::date(chrono::NaiveDate::from_ymd_opt(2026,10,15).unwrap()), i18n::weekday(3)).into());
     let sounds = || ModelRc::new(VecModel::from(["静音", "轻柔铃声", "马林巴琴", "钟声", "钢琴旋律", "电钢琴旋律", "铃声旋律", "自定义提示音"].iter().map(|s| i18n::t(s).into()).collect::<Vec<_>>()));
@@ -82,7 +85,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     save(&windows.borrow()[0], &directory.join("alarm-delete.bmp"), 480, 760);
     ui.set_pending_delete_id("".into()); ui.set_alarms(ModelRc::default());
     save(&windows.borrow()[0], &directory.join("alarm-empty.bmp"), 480, 760);
-    let about = AboutWindow::new()?; about.global::<Theme>().set_dark(!light); about.show()?;
+    let about = AboutWindow::new()?; about.global::<Theme>().set_dark(!light); about.global::<Theme>().set_variant(variant); about.show()?;
     save(&windows.borrow()[1], &directory.join("about.bmp"), 400, 348);
+    if std::env::args().nth(5).as_deref() == Some("palettes") {
+        ui.set_page(3); ui.set_settings_scroll_y(0.);
+        for dark in [false, true] {
+            ui.global::<Theme>().set_dark(dark); ui.set_theme_index(if dark { 0 } else { 1 });
+            for variant in 0..6 {
+                ui.global::<Theme>().set_variant(variant); ui.set_color_theme(variant);
+                save(&windows.borrow()[0], &directory.join(format!("palette-{}-{variant}.bmp", if dark { "dark" } else { "light" })), 480, 760);
+            }
+        }
+    }
     Ok(())
 }

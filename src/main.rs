@@ -47,6 +47,7 @@ struct App {
     alert: Option<Alert>,
     clock_alert: Option<Alert>,
     pending_clock: Option<Alert>,
+    pending_clock_deadline: Option<Instant>,
     sound_owner: Option<String>,
     quit_pending: bool,
     import_notice: String,
@@ -435,7 +436,10 @@ impl App {
                 if let Err(error) = self.player.play(alert.sound, &folders) { self.folders.log(&error); }
                 self.sound_owner = Some(alert.token.clone());
             }
-            if alert.clock_chime { self.pending_clock = Some(alert); }
+            if alert.clock_chime {
+                self.pending_clock = Some(alert);
+                self.pending_clock_deadline = Some(Instant::now() + Duration::from_secs(30));
+            }
             else { self.alerts.push_back(alert); }
         }
     }
@@ -449,7 +453,7 @@ impl App {
         }
     }
     fn clear_alerts(&mut self) {
-        self.close_alert(); self.close_clock_alert(); self.pending_clock = None;
+        self.close_alert(); self.close_clock_alert(); self.pending_clock = None; self.pending_clock_deadline = None;
         self.alerts.clear(); self.player.stop(); self.sound_owner = None;
     }
     fn close_clock_alert(&mut self) {
@@ -527,7 +531,9 @@ fn ensure_alert_window(controller: &Controller) -> Option<AlertWindow> {
     } });
     let weak = Rc::downgrade(controller);
     ui.window().on_close_requested(move || {
-        if let Some(app) = weak.upgrade() { app.borrow_mut().dismiss_alert(); present_alert(&app); }
+        // The toolkit hides this same reusable window after the callback.
+        // Let the next scheduler tick display the following reminder.
+        if let Some(app) = weak.upgrade() { app.borrow_mut().dismiss_alert(); }
         slint::CloseRequestResponse::HideWindow
     });
     controller.borrow_mut().alert_ui = Some(ui.clone_strong());
@@ -541,14 +547,19 @@ fn show_alert_window(controller: &Controller, ui: &AlertWindow) {
 }
 
 fn present_alert(controller: &Controller) {
+    {
+        let app = controller.borrow();
+        if app.alert.is_some() || app.alerts.is_empty() { return; }
+    }
+    let Some(ui) = ensure_alert_window(controller) else { return; };
     let alert = {
         let mut app = controller.borrow_mut();
-        if app.alert.is_some() || app.clock_alert.is_some() { return; }
+        // An actual alarm/timer takes priority over a clock-chime notice.
+        app.close_clock_alert();
         app.alerts.pop_front()
     };
     let Some(alert) = alert else { return; };
     controller.borrow_mut().stop_preview();
-    let Some(ui) = ensure_alert_window(controller) else { return; };
     {
         let app = controller.borrow();
         ui.global::<Theme>().set_dark(app.engine.doc.settings.theme == 0);
@@ -566,14 +577,22 @@ fn present_alert(controller: &Controller) {
 }
 
 fn present_clock_alert(controller: &Controller) {
+    {
+        let mut state = controller.borrow_mut();
+        if state.pending_clock_deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            state.pending_clock = None; state.pending_clock_deadline = None;
+        }
+        if state.alert.is_some() || !state.alerts.is_empty() || state.pending_clock.is_none() { return; }
+    }
+    let Some(ui) = ensure_alert_window(controller) else { return; };
     let alert = {
         let mut state = controller.borrow_mut();
         // The shared window shows one reminder at a time; the tick loop retries.
         if state.alert.is_some() { return; }
         let Some(alert) = state.pending_clock.take() else { return; };
+        state.pending_clock_deadline = None;
         state.close_clock_alert(); alert
     };
-    let Some(ui) = ensure_alert_window(controller) else { return; };
     {
         let app = controller.borrow();
         ui.global::<Theme>().set_dark(app.engine.doc.settings.theme == 0);
@@ -805,6 +824,11 @@ fn about(controller: &Controller) {
             include_str!("../licenses/Sarasa-Gothic-OFL.txt"), "\r\n\r\nFFmpeg\r\n",
             include_str!("../licenses/FFmpeg-NOTICE.txt"), "\r\n\r\nMinGW-w64 runtime\r\n",
             include_str!("../licenses/MinGW-w64-runtime.txt")).to_owned();
+        #[cfg(feature = "gpu")]
+        {
+            text.push_str("\r\n\r\nFemtoVG\r\n");
+            text.push_str(include_str!("../licenses/FemtoVG-MIT.txt"));
+        }
         let mut rust_notices = String::new();
         use std::io::Read;
         let _ = flate2::read::GzDecoder::new(include_bytes!("../licenses/Rust-dependencies.txt.gz").as_slice()).read_to_string(&mut rust_notices);
@@ -1031,7 +1055,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Software rasterizer only: no OpenGL driver context per window. On Windows
     // a WGL context costs tens of megabytes of driver-private memory, which
     // dwarfs everything this app itself allocates.
-    slint::BackendSelector::new().backend_name("winit-software".into()).select()?;
+    let gpu_requested = std::env::args().any(|argument| argument == "--renderer=gpu");
+    if gpu_requested && !cfg!(feature = "gpu") {
+        return Err("GPU rendering requires a build compiled with --features gpu.".into());
+    }
+    slint::BackendSelector::new().backend_name(if gpu_requested { "winit-femtovg" } else { "winit-software" }.into()).select()?;
     let folders = Folders::system();
     let (mut document, message) = data::load(&folders);
     document.settings.startup = native::startup_enabled();
@@ -1055,7 +1083,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let app = Rc::new(RefCell::new(App { ui: ui.as_weak(), mini, compact: false, mini_positioned: false, engine: Engine::new(document, message), folders,
         player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, focus_bars, countdown_names, alarm_names, week_offset: 0,
         week_day: Local::now().weekday().num_days_from_monday() as i32, editor: None, confirm: None, about: None,
-        alerts: VecDeque::new(), alert_ui: None, alert: None, clock_alert: None, pending_clock: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
+        alerts: VecDeque::new(), alert_ui: None, alert: None, clock_alert: None, pending_clock: None, pending_clock_deadline: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
         message_seen: String::new(), message_deadline: None }));
     app.borrow().restore_focus_draft();
     app.borrow().refresh_sound_library(); ui.set_draft_sound(app.borrow().sound_index(app.borrow().engine.doc.settings.default_sound)); bind(&app, &ui); app.borrow().apply_theme(); app.borrow_mut().refresh();

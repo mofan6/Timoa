@@ -1,3 +1,15 @@
+# Timoa 1.3.0 · 2026-11-08
+
+- 默认使用软件渲染，减少 GPU 驱动和渲染资源占用，保留读屏支持。
+- 重复提醒复用同一个窗口；优化多条提醒的衔接，倒计时与闹钟优先显示，过时的报时提示不再延后弹出。
+- 保留六主题、深浅模式、渐变按钮与菜单阴影；中文继续使用更纱黑体的真实常规/加粗字重及 DirectWrite 原生绘制。
+- 单 EXE 改用未加壳的原生 PE，安装包采用 LZMA 压缩；便携文件增大，以减少启动解压与专用内存开销。
+- 继续提供同一套源码构建的 Windows 7 SP1–11 x64/x86 便携版与安装包，无需额外运行库，数据和备份格式保持兼容。
+
+English: Software rendering by default, retained accessibility and native Windows font coverage, one reusable reminder window with priority scheduling, preserved gradients and menu shadows, ordinary portable PE files and LZMA-compressed installers. Windows 7 SP1–11 x64/x86 builds share the same source and data format.
+
+---
+
 # Timoa 1.2.0 · 2026-10-23
 
 - 新增六套配色主题：默认金、雾蓝、青竹、暮紫、玫瑰、暖橘，每套均适配浅色与深色模式。

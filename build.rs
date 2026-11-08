@@ -33,6 +33,7 @@ fn check_ui_font_coverage() {
 }
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=TIMO_SKIP_RESOURCES");
     check_ui_font_coverage();
     let catalog: std::collections::BTreeMap<String, [String; 2]> = serde_json::from_str(
         &std::fs::read_to_string("i18n/messages.json").expect("Translation catalog")

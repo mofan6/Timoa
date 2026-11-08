@@ -1,0 +1,28 @@
+{
+  "version": "1.3.0",
+  "defaultRuntimeIncludesSoftwareRenderer": true,
+  "accessibilityRetained": true,
+  "defaultRuntimeIncludesFemtoVG": false,
+  "runtimeDependencyCount": 290,
+  "offlineArtwork": {
+    "nativeWindowsOpened": false,
+    "userDataRead": false,
+    "languages": [
+      "Simplified Chinese",
+      "Traditional Chinese",
+      "English"
+    ],
+    "themeModeCombinations": 12,
+    "pages": [
+      "countdown",
+      "alarms",
+      "week",
+      "settings",
+      "alarm editor",
+      "about"
+    ]
+  },
+  "functionalTestSuiteRun": false,
+  "memoryProfilePerformed": false,
+  "memoryProfileReason": "An existing user-owned Timoa instance was running; it was not stopped."
+}

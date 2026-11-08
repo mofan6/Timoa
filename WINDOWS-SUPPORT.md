@@ -32,14 +32,23 @@ $env:CARGO_TARGET_DIR = 'D:\TimoaBuild\target'
 
 依赖升级时须复核旧系统硬导入与回退路径，保留 vendor 补丁的上游许可证。历史来源见 COMPATIBILITY.md，当前支持范围以本文件及 docs/unified-windows-review.json 为准。
 
+## 渲染、字体与发布体积
+
+1.3.0 默认启用 Slint 软件渲染器并保留 accessibility。中文使用相同的更纱黑体 Regular / Bold 子集，软件渲染器通过 DirectWrite 生成覆盖图；Windows 7 使用基础工厂与灰度转换，新接口通过 COM 查询动态使用。失败或不支持的字体回退 Swash。原生字体面缓存限制为 16 项，字形缓存沿用 1 MiB 上限，字库数据共享。
+
+主题渐变与名称菜单阴影使用可供两种渲染路径使用的 SVG 资源。默认 EXE 不包含 OpenGL/FemtoVG，且不进行 UPX 压缩；安装包通过 LZMA 压缩下载内容。普通 PE 可以按需映射代码页，避免启动时将整个压缩映像解到专用内存中；因此便携文件会比旧版更大。
+
+源码保留可选的 `gpu` 特性，开发者可在相同目标与链接参数的 Cargo 构建中加入 `--features gpu`，再用 `Timoa.exe --renderer=gpu` 启用。默认四份成品没有该特性，不能通过命令行加载一个未编译的 GPU 后端。
+
 ## 验证范围
 
 本机是 Windows 11 x64。执行结果记录在 docs/unified-windows-review.json。
 1.2.0 的架构、PE 导入、压缩前后代码段与安装包内容的静态核对记录在 docs/release-1.2.0-package-review.json；未执行安装器或新增实际窗口验证。
+1.3.0 的两架构编译、PE 导入及安装包内嵌一致性记录见 docs/release-1.3.0-package-review.json。离屏绘制用于页面输出对比，不视为完整交互测试。
 Windows 7、8、8.1、10 当前没有可用真机或虚拟机环境，仅完成编译 / 静态兼容检查；不将其写成已实机验证。
 安装器进行静态架构、系统门槛和内嵌文件一致性核对，避免测试安装改动用户已有安装和启动项。
 
 ## 源码与原版备份
 
-当前 main 分支和 v1.2.0 标签采用统一源码；v1.1.5 及合并前的 main / windows7 提交保留在 Git 历史中，原始源码目录和源码包另有本地备份。
+当前 main 分支及 v1.2.0 / v1.3.0 标签采用统一源码；v1.1.5 及合并前的 main / windows7 提交保留在 Git 历史中，原始源码目录和源码包另有本地备份。
 后续功能修改只维护本目录的业务和界面源码，再编译两个架构。

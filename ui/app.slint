@@ -693,6 +693,7 @@ export component MainWindow inherits Window {
                       }
                       HorizontalLayout { height: 42px; spacing: 10px;
                           for name[index] in [@tr("默认金"), @tr("雾蓝"), @tr("青竹"), @tr("暮紫"), @tr("玫瑰"), @tr("暖橘")]: ThemeSwatch {
+                              theme-index: index;
                               label: name; selected: root.color-theme == index;
                               swatch: Theme.swatch(index);
                               clicked => { root.change-color-theme(index); }

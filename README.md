@@ -13,12 +13,12 @@
 
 ## 下载与使用
 
-当前版本 **1.2.0**。按处理器架构提供 x64 与 x86，两者共用全部功能和页面。
+当前版本 **1.3.0**。按处理器架构提供 x64 与 x86，两者共用全部功能和页面。
 
 | 架构 | 便携版 | 安装包 |
 | --- | --- | --- |
-| 64 位 x64 | [Timoa-1.2.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64.exe) | [Timoa-1.2.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64-setup.exe) |
-| 32 位 x86 | [Timoa-1.2.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86.exe) | [Timoa-1.2.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86-setup.exe) |
+| 64 位 x64 | [Timoa-1.3.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64.exe) | [Timoa-1.3.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64-setup.exe) |
+| 32 位 x86 | [Timoa-1.3.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86.exe) | [Timoa-1.3.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86-setup.exe) |
 
 目标系统为 Windows 7 SP1、8、8.1、10、11。x86 需要 SSE2，可通过 WOW64 在 x64 Windows 上运行；没有单独的 Windows 11 32 位系统。无需另装 .NET、VC++、Java 或 WebView2。
 
@@ -58,7 +58,7 @@
 
 ## 构建与许可
 
-使用 **Rust + Slint 1.18.1**，原生编译并静态链接语言运行时。
+使用 **Rust + Slint 1.18.1**，原生编译并静态链接语言运行时。默认采用软件渲染，减少 GPU 驱动与渲染资源占用，同时保留读屏支持、主题渐变与中文原生字体绘制。单 EXE 使用普通 PE 格式，安装包采用 LZMA 压缩。
 中文界面内置更纱黑体 Sarasa UI SC 的常规与加粗字库子集，保留字形微调信息；英文沿用 Segoe UI，自定义文字中未内置的字由系统字体补齐。详见 [字体资源说明](assets/fonts/README.md)。
 当前两个架构的编译与打包方法见 [Windows 支持与构建](WINDOWS-SUPPORT.md)，项目结构与历史开发资料见 [开发文档](docs/BUILDING.zh-CN.md)。
 发布前对备份及开机启动的代码审查记录见 [代码审查](docs/代码审查.md)；该记录不代表实际功能验证通过。

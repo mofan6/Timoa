@@ -13,12 +13,12 @@
 
 ## Download
 
-Version **1.2.0**. One source tree provides x64 and x86 builds with the same features and declarative UI.
+Version **1.3.0**. One source tree provides x64 and x86 builds with the same features and declarative UI.
 
 | Architecture | Portable EXE | Installer |
 | --- | --- | --- |
-| x64 | [Timoa-1.2.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64.exe) | [Timoa-1.2.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x64-setup.exe) |
-| x86 | [Timoa-1.2.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86.exe) | [Timoa-1.2.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.2.0/Timoa-1.2.0-windows-x86-setup.exe) |
+| x64 | [Timoa-1.3.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64.exe) | [Timoa-1.3.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64-setup.exe) |
+| x86 | [Timoa-1.3.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86.exe) | [Timoa-1.3.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86-setup.exe) |
 
 Targets Windows 7 SP1, 8, 8.1, 10 and 11. x86 requires SSE2 and also runs through WOW64 on x64 Windows. Windows 11 has no x86 OS edition. No separate .NET, VC++, Java or WebView2 runtime installation is required.
 
@@ -55,7 +55,7 @@ Uninstallation preserves user data. Exit an older version from the tray before r
 
 ## Build and licenses
 
-Built with Rust and Slint 1.18.1, with a statically linked language runtime. See [Windows support and builds](WINDOWS-SUPPORT.md) for the current toolchain and packaging instructions; [the development documentation](docs/BUILDING.zh-CN.md) preserves project structure and historical notes.
+Built with Rust and Slint 1.18.1, with a statically linked language runtime. Software rendering is the default to reduce GPU-driver and rendering allocations while retaining accessibility, gradient themes and native Windows font rasterization. Portable EXEs are ordinary PE images; installers use LZMA compression. See [Windows support and builds](WINDOWS-SUPPORT.md) for the current toolchain and packaging instructions; [the development documentation](docs/BUILDING.zh-CN.md) preserves project structure and historical notes.
 
 The Chinese interface embeds subsets of Sarasa UI SC Regular and Bold with the original hinting preserved. English retains Segoe UI, and user text outside the bundled coverage uses system font fallback. See [font resources](assets/fonts/README.md).
 

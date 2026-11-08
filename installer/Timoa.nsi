@@ -1,6 +1,6 @@
 Unicode true
 !ifndef APP_VERSION
-  !define APP_VERSION "1.2.0"
+  !define APP_VERSION "1.3.0"
 !endif
 !ifndef APP_ARCH
   !define APP_ARCH "x64"
@@ -28,7 +28,7 @@ OutFile "${PACKAGE_DIR}\Timoa-${APP_VERSION}-windows-${APP_ARCH}-setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\Timoa"
 InstallDirRegKey HKCU "Software\TIMO" "InstallDir"
 RequestExecutionLevel user
-SetCompressor zlib
+SetCompressor /SOLID lzma
 SetDatablockOptimize on
 ManifestDPIAware true
 Icon "..\assets\timoa.ico"

@@ -1,13 +1,17 @@
 [package]
 name = "timoa"
-version = "1.2.0"
+version = "1.3.0"
 edition = "2024"
 license = "Apache-2.0"
 build = "build.rs"
 description = "Timoa：独立、轻量的中文计时与闹钟"
 
+[features]
+default = []
+gpu = ["slint/renderer-femtovg"]
+
 [dependencies]
-slint = { version = "=1.18.1", default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-software", "raw-window-handle-06", "unstable-winit-030"] }
+slint = { version = "=1.18.1", default-features = false, features = ["std", "compat-1-18", "backend-winit", "renderer-software", "accessibility", "raw-window-handle-06", "unstable-winit-030"] }
 raw-window-handle = "0.6"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
 serde = { version = "1", features = ["derive"] }
@@ -41,3 +45,6 @@ path = "tools/logic-checks.rs"
 [patch.crates-io]
 windows-link = { path = "vendor/windows-link" }
 i-slint-backend-winit = { path = "vendor/i-slint-backend-winit" }
+femtovg = { path = "vendor/femtovg" }
+i-slint-renderer-femtovg = { path = "vendor/i-slint-renderer-femtovg" }
+i-slint-renderer-software = { path = "vendor/i-slint-renderer-software" }

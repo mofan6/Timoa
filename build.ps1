@@ -5,6 +5,7 @@ param(
     [string]$NsisCompiler
 )
 $ErrorActionPreference='Stop'
+if (Test-Path Env:TIMO_SKIP_RESOURCES) { throw 'Unset TIMO_SKIP_RESOURCES before building release packages.' }
 Set-Location -LiteralPath $PSScriptRoot
 $taskPackageVersion = [regex]::Match([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Cargo.toml')), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
 if (!$taskPackageVersion) { throw 'Cannot read the application version from Cargo.toml.' }
@@ -68,8 +69,8 @@ foreach ($taskArch in $taskArchitectures) {
     New-Item -ItemType Directory -Path $taskDist -Force | Out-Null
     $taskExe=Join-Path $taskDist "Timoa-$taskPackageVersion-windows-$taskArch.exe"
     Copy-Item -LiteralPath (Join-Path $taskTargetDir "$taskTarget\release\Timoa.exe") -Destination $taskExe -Force
-    # No UPX: packing trades ~8 MB of disk for ~19 MB of private commit, because
-    # the stub decompresses the whole image into process memory at startup.
+    # Keep the executable as a normal, demand-paged PE image. Compress the
+    # installer payload instead of unpacking the entire executable at startup.
     if ($Setup) {
         if (!$NsisCompiler) {
             $taskNsis=Get-Command makensis.exe -ErrorAction SilentlyContinue
