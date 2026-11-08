@@ -44,14 +44,14 @@ Slint 官方桌面支持范围主要为 Windows 10 / 11；本兼容适配不代�
 1. Rust `1.99.0-x86_64-pc-windows-gnu`、`rust-src` 与 `i686-pc-windows-gnu` target
    （只取其中的 `crt2.o`、`dllcrt2.o` 启动对象，不链接其中的预编译 Rust 标准库）。
 2. w64devkit 2.10.1（包含 i686 / x86_64 GCC、windres）。
-3. 打包时使用有 x86 / amd64 Unicode stubs 和 System 插件的 NSIS；UPX 5.1.0 可选。
+3. 打包时使用有 x86 / amd64 Unicode stubs 和 System 插件的 NSIS。
 
 ```powershell
 rustup toolchain install 1.99.0-x86_64-pc-windows-gnu --profile minimal --component rust-src
 rustup target add --toolchain 1.99.0-x86_64-pc-windows-gnu i686-pc-windows-gnu
 rustup override set 1.99.0-x86_64-pc-windows-gnu
 $env:CARGO_TARGET_DIR = 'D:\TimoaBuild\target-compat'
-.\build.ps1 -Architecture All -Setup -ToolchainBin 'D:\w64devkit\bin' -NsisCompiler 'D:\w64devkit\share\nsis\Bin\makensis.exe' -Upx 'D:\upx\upx.exe'
+.\build.ps1 -Architecture All -Setup -ToolchainBin 'D:\w64devkit\bin' -NsisCompiler 'D:\w64devkit\share\nsis\Bin\makensis.exe'
 ```
 
 `build.ps1` 使用 build-std / host-config 所需的 Cargo 开关，因此仅在脚本进程中设置

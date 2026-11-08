@@ -9,10 +9,10 @@
 - Rust + Slint 1.18.1，声明式 `.slint` 组件、单向数据模型与独立调度层。
 - 原生编译、静态链接语言运行时。最终用户无需安装 .NET、VC++、WebView2 或 Java。
 - 使用 Windows 自带微软雅黑 UI 与 Bahnschrift 矢量字体，避免字体副本与栅格字库。
-- winit + FemtoVG 矢量抗锯齿渲染，显卡不支持时回退软件渲染，保留键盘与辅助功能。
+- winit + Slint 软件光栅渲染器，不创建 OpenGL 上下文；每个窗口因此不产生显卡驱动的私有内存开销。
 - 6 段原版 WAV 无损压缩嵌入。离线 FFmpeg 音频解码组件按需展开。
 - 保留深灰黑底与 `#E3B341` 金色，可保存的深浅色主题、DWM 原生窗口边框与 Windows 11 圆角。
-- 发布版以官方 UPX 5.1.0 压缩原生 PE，保留图标与重定位。启动时在内存中解压；用户无需安装 UPX。
+- 发布版不再使用 UPX：压缩只减少磁盘体积，却会让启动时把整个映像解压进私有内存。
 - 简体中文、繁體中文与 English 内置于 EXE，默认简体中文，在设置中切换并保存；无需下载语言包。
 
 ## 功能
@@ -80,7 +80,7 @@ Windows 自带字体由系统动态使用，不是需要额外安装的运行库
 ## 构建
 
 本次构建：Rust 1.99.0 / `x86_64-pc-windows-gnu`，w64devkit 2.10.1，Rust 自带 LLD。
-本版安装包使用 w64devkit 随附 NSIS（版本标识 `11-Oct-2026.cvs`）；发布 EXE 使用 UPX 5.1.0。
+本版安装包使用 w64devkit 随附 NSIS（版本标识 `11-Oct-2026.cvs`）；发布 EXE 不再做可执行文件压缩。
 Slint 1.18.1 需要 Rust 1.92 或更新。源码包含 `Cargo.lock`；首次构建需联网下载 Rust 依赖。
 
 1. 安装 Rust 的 GNU x64 工具链，或 MSVC x64 工具链加 Visual Studio C++ Build Tools。
@@ -89,9 +89,6 @@ Slint 1.18.1 需要 Rust 1.92 或更新。源码包含 `Cargo.lock`；首次构�
 4. 安装包：准备 NSIS 3.11+，运行 `powershell -ExecutionPolicy Bypass -File .\build.ps1 -Setup`。
    可用 `-NsisCompiler '完整路径\makensis.exe'` 指定官方便携编译器。
    安装器使用 zlib 压缩，用户安装时同样不依赖额外运行库。
-5. 复现压缩发布版，在构建命令加 `-Upx '完整路径\upx.exe'`。
-   使用官方 UPX 5.1.0，下载包 `upx-5.1.0-win64.zip` 的 SHA256 为
-   `41c7492edeed0f7e67d347ca9e8d2131e2af7ca7a7695f92283a8e655c251c13`。
 
 GNU 构建使用 Rust 自带的静态 CRT，只从 w64devkit 取 Windows shell 导入库，避免混用 CRT。
 MSVC 构建同样通过 `+crt-static` 静态链接语言运行时。只发布 `dist` 的两个 EXE。

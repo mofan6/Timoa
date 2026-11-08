@@ -29,14 +29,10 @@ FFmpeg：应用内包含可替换的音频解码组件，采用 LGPL 2.1 或更�
 不使用网络音频解码，不修改导入的原文件。
 
 其他 Rust 依赖、Windows GNU 运行时的许可见 licenses 目录。
-FemtoVG 的 Windows 字形覆盖适配与原始 MIT 许可见
-licenses/FemtoVG-NOTICE.txt、licenses/FemtoVG-MIT.txt 及 vendor/femtovg。
+本版使用 Slint 软件光栅渲染器，不再链接 FemtoVG / OpenGL 后端。
 单 EXE 已嵌入许可资料，可在设置 → 关于 → 第三方许可证中打开。
 
-发布 EXE 使用官方未修改的 UPX 5.1.0 压缩，GPL-2.0+ 及其压缩程序特别许可。
-原生程序启动时在内存中解压，不需要安装 UPX，不另行展开主程序副本。
-UPX：https://github.com/upx/upx/releases/tag/v5.1.0
-许可见 licenses/UPX-License.txt 与 UPX-GPL-2.0.txt。
+发布 EXE 不做可执行文件压缩，直接分发链接器产出的原生 PE。
 
 安装程序使用 NSIS / Modern UI 2 和 zlib 压缩，许可见 licenses/NSIS.txt。
 本版打包器为 w64devkit 2.10.1 随附的 NSIS，版本标识 11-Oct-2026.cvs。
