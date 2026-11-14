@@ -1,6 +1,6 @@
 Unicode true
 !ifndef APP_VERSION
-  !define APP_VERSION "1.3.0"
+  !define APP_VERSION "1.3.1"
 !endif
 !ifndef APP_ARCH
   !define APP_ARCH "x64"

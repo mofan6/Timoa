@@ -6,6 +6,7 @@ mod native;
 mod i18n;
 mod shortcuts;
 mod stats;
+mod swatch_artwork;
 
 use chrono::{Datelike, Local, NaiveDate, TimeZone, Timelike};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
@@ -1067,6 +1068,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         document.settings.custom_sounds.insert(0, data::CustomSound { id: 7, name: if document.settings.custom_name.is_empty() { "自定义提示音".into() } else { document.settings.custom_name.clone() } });
     }
     let ui = MainWindow::new()?;
+    ui.global::<SwatchArtwork>().on_render(swatch_artwork::render);
     let mini = MiniWindow::new()?;
     i18n::select(document.settings.language);
     ui.window().set_size(slint::LogicalSize::new(document.settings.width, document.settings.height));

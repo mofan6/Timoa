@@ -1,7 +1,7 @@
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { SwatchArtwork } from "swatch-artwork.slint";
-export { Theme }
+export { Theme, SwatchArtwork }
 
 import "../assets/fonts/SarasaUiSC-Regular.ttf";
 import "../assets/fonts/SarasaUiSC-Bold.ttf";
@@ -105,11 +105,11 @@ export component ThemeSwatch inherits Rectangle {
     callback clicked();
     min-width: 32px; preferred-width: 46px; height: 42px;
     horizontal-stretch: 1; background: transparent;
-    // Face and outline share one SVG viewport and exactly the same corner
-    // centers. A single colored texture replaces the previous four layers.
+    // Generate a viewport matching the real control size. The fixed corner
+    // radius and concentric outline stay crisp when the window becomes wider.
     Image { x: 0px; y: 0px; width: parent.width; height: parent.height;
-        source: SwatchArtwork.source(root.theme-index, Theme.dark, root.selected || keys.has-focus,
-            touch.pressed ? (touch.has-hover ? 2 : 3) : touch.has-hover ? 1 : 0);
+        source: SwatchArtwork.render(root.swatch, root.width / 1phx, root.height / 1phx, 1px / 1phx,
+            root.selected || keys.has-focus, touch.has-hover, touch.pressed);
         image-fit: fill;
         opacity: touch.pressed ? 0.96 : touch.has-hover ? 1 : 0.99;
         animate opacity { duration: 90ms; easing: ease-out; }

@@ -4,6 +4,7 @@ use slint::platform::{Platform, WindowAdapter, software_renderer::{MinimalSoftwa
 use std::{cell::RefCell, fs, io::Write, path::Path, rc::Rc};
 #[allow(dead_code)]
 #[path = "../src/i18n.rs"] mod i18n;
+#[path = "../src/swatch_artwork.rs"] mod swatch_artwork;
 slint::include_modules!();
 
 struct Canvas { windows: Rc<RefCell<Vec<Rc<MinimalSoftwareWindow>>>> }
@@ -43,6 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let windows = Rc::new(RefCell::new(Vec::new()));
     slint::platform::set_platform(Box::new(Canvas { windows: windows.clone() }))?;
     let ui = MainWindow::new()?;
+    ui.global::<SwatchArtwork>().on_render(swatch_artwork::render);
     let language = std::env::args().nth(2).and_then(|v| v.parse::<i32>().ok()).unwrap_or(0).clamp(0, 2);
     i18n::select(language); ui.set_language_index(language);
     let light = std::env::args().nth(3).is_some_and(|v| v == "light");

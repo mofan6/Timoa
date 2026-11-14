@@ -1,3 +1,13 @@
+# Timoa 1.3.1 · 2026-11-14
+
+- 修复主题颜色按钮的模糊和横向拉伸变形，按按钮实际尺寸与屏幕缩放绘制。
+- 固定圆角与选中边框的尺寸和居中关系，去掉模糊光晕，保留原有渐变配色、悬浮及按下反馈。
+- 延续 1.3.0 的功能、字体与软件渲染方式，提供 x64/x86 便携版和安装包。
+
+English: Sharper theme buttons at their actual size and display scale, consistent corners and selection outlines, and no blurred halo. Existing colors, gradients, interactions and application features are preserved.
+
+---
+
 # Timoa 1.3.0 · 2026-11-08
 
 - 默认使用软件渲染，减少 GPU 驱动和渲染资源占用，保留读屏支持。

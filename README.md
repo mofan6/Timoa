@@ -13,12 +13,12 @@
 
 ## 下载与使用
 
-当前版本 **1.3.0**。按处理器架构提供 x64 与 x86，两者共用全部功能和页面。
+当前版本 **1.3.1**。按处理器架构提供 x64 与 x86，两者共用全部功能和页面。
 
 | 架构 | 便携版 | 安装包 |
 | --- | --- | --- |
-| 64 位 x64 | [Timoa-1.3.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64.exe) | [Timoa-1.3.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64-setup.exe) |
-| 32 位 x86 | [Timoa-1.3.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86.exe) | [Timoa-1.3.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86-setup.exe) |
+| 64 位 x64 | [Timoa-1.3.1-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x64.exe) | [Timoa-1.3.1-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x64-setup.exe) |
+| 32 位 x86 | [Timoa-1.3.1-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x86.exe) | [Timoa-1.3.1-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x86-setup.exe) |
 
 目标系统为 Windows 7 SP1、8、8.1、10、11。x86 需要 SSE2，可通过 WOW64 在 x64 Windows 上运行；没有单独的 Windows 11 32 位系统。无需另装 .NET、VC++、Java 或 WebView2。
 

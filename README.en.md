@@ -13,12 +13,12 @@
 
 ## Download
 
-Version **1.3.0**. One source tree provides x64 and x86 builds with the same features and declarative UI.
+Version **1.3.1**. One source tree provides x64 and x86 builds with the same features and declarative UI.
 
 | Architecture | Portable EXE | Installer |
 | --- | --- | --- |
-| x64 | [Timoa-1.3.0-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64.exe) | [Timoa-1.3.0-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x64-setup.exe) |
-| x86 | [Timoa-1.3.0-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86.exe) | [Timoa-1.3.0-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.0/Timoa-1.3.0-windows-x86-setup.exe) |
+| x64 | [Timoa-1.3.1-windows-x64.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x64.exe) | [Timoa-1.3.1-windows-x64-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x64-setup.exe) |
+| x86 | [Timoa-1.3.1-windows-x86.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x86.exe) | [Timoa-1.3.1-windows-x86-setup.exe](https://github.com/mofan6/Timoa/releases/download/v1.3.1/Timoa-1.3.1-windows-x86-setup.exe) |
 
 Targets Windows 7 SP1, 8, 8.1, 10 and 11. x86 requires SSE2 and also runs through WOW64 on x64 Windows. Windows 11 has no x86 OS edition. No separate .NET, VC++, Java or WebView2 runtime installation is required.
 
