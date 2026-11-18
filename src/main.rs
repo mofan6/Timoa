@@ -492,22 +492,41 @@ where for<'a> Theme<'a>: slint::Global<'a, C> {
 
 fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&slint::Window>)
 where for<'a> Theme<'a>: slint::Global<'a, C> {
-    let _ = window.show();
+    let parent = parent.filter(|parent| native::visible(parent));
     let owner = parent.and_then(native::hwnd);
+    if let Err(error) = window.show() {
+        // A failed show() leaves an empty native window behind (160x28 at
+        // -32000 on Windows), which looks like a blank taskbar item.
+        eprintln!("Timoa: window show failed: {error}");
+    }
     apply_native_theme(window, owner);
     if let Some(parent) = parent {
+        // Center only over a visible parent. A hidden or minimized window can
+        // report off-screen coordinates (minimized windows report -32000),
+        // which would move the reminder somewhere the user cannot see it.
         {
             let position = parent.position();
             let owner_size = parent.size(); let size = window.window().size();
             window.window().set_position(slint::PhysicalPosition::new(position.x + (owner_size.width as i32 - size.width as i32) / 2,
                 position.y + (owner_size.height as i32 - size.height as i32) / 2));
         }
+    } else {
+        // No visible owner (tray mode). A reused window may still carry the
+        // off-screen position set while its owner was minimized; place it on
+        // the primary monitor so the reminder is actually reachable.
+        native::center_on_primary(window.window());
     }
     let weak = window.as_weak();
     slint::Timer::single_shot(Duration::from_millis(10), move || {
         // Read the live palette again: a theme change before this callback must
         // not restore the colors captured when the popup was first opened.
-        if let Some(window) = weak.upgrade() { apply_native_theme(&window, owner); }
+        if let Some(window) = weak.upgrade() {
+            apply_native_theme(&window, owner);
+            // winit may park a newly shown window at the hidden owner's
+            // off-screen coordinates. Reassert the position after the first
+            // layout pass so the reminder stays on screen.
+            if owner.is_none() { native::center_on_primary(window.window()); }
+        }
     });
 }
 
