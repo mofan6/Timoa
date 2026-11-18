@@ -126,6 +126,9 @@ unsafe extern "system" fn window_proc(hwnd: HWND, message: u32, w: WPARAM, l: LP
     }
 }
 
+pub fn visible(window: &slint::Window) -> bool {
+    hwnd(window).is_some_and(|hwnd| unsafe { IsWindowVisible(hwnd) != 0 })
+}
 pub fn hwnd(window: &slint::Window) -> Option<HWND> {
     use raw_window_handle::HasWindowHandle;
     let provider = window.window_handle();
@@ -160,7 +163,13 @@ pub fn theme_frame(window: &slint::Window, owner: Option<HWND>, palette: FramePa
         DwmSetWindowAttribute(hwnd, 35, (&color as *const u32).cast(), 4);
         DwmSetWindowAttribute(hwnd, 34, (&border as *const u32).cast(), 4);
         DwmSetWindowAttribute(hwnd, 33, (&corner as *const i32).cast(), 4);
-        if let Some(owner) = owner { SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner as _); }
+        // Windows hides an owned window whenever its owner is hidden or
+        // minimized. Timoa normally runs from the tray with the main window
+        // hidden, so an owned reminder would be shown by Slint and then
+        // immediately hidden again by the window manager. Clear any stale
+        // owner from an earlier showing when the parent is not viewable.
+        let owner = owner.filter(|owner| IsWindowVisible(*owner) != 0);
+        SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner.map_or(std::ptr::null_mut(), |owner| owner as _) as _);
     }
 }
 pub fn show(window: &slint::Window) {
@@ -286,6 +295,20 @@ pub fn pointer_position(window: &slint::Window) -> Option<slint::LogicalPosition
         if GetCursorPos(&mut point) == 0 || ScreenToClient(hwnd, &mut point) == 0 { return None; }
         let scale = window.scale_factor().max(0.1);
         Some(slint::LogicalPosition::new(point.x as f32 / scale, point.y as f32 / scale))
+    }
+}
+
+/// Place a window at the center of the work area, used for popups whose owner
+/// is hidden (tray mode) and whose previous position may be off-screen.
+pub fn center_on_primary(window: &slint::Window) {
+    unsafe {
+        let mut info: MONITORINFO = std::mem::zeroed(); info.cbSize = std::mem::size_of_val(&info) as u32;
+        let monitor = MonitorFromWindow(std::ptr::null_mut(), MONITOR_DEFAULTTOPRIMARY);
+        if GetMonitorInfoW(monitor, &mut info) == 0 { return; }
+        let size = window.size();
+        let x = info.rcWork.left + (info.rcWork.right - info.rcWork.left - size.width as i32) / 2;
+        let y = info.rcWork.top + (info.rcWork.bottom - info.rcWork.top - size.height as i32) / 2;
+        window.set_position(slint::PhysicalPosition::new(x, y));
     }
 }
 
