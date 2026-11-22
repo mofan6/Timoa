@@ -45,6 +45,7 @@ struct App {
     // owns a full render surface and scene graph, so allocating a fresh one per
     // reminder both spikes memory and fragments the allocator.
     alert_ui: Option<AlertWindow>,
+    alert_ui_generation: u64,
     alert: Option<Alert>,
     clock_alert: Option<Alert>,
     pending_clock: Option<Alert>,
@@ -450,23 +451,36 @@ impl App {
             if self.sound_owner.as_deref() == Some(alert.token.as_str()) {
                 self.player.stop(); self.sound_owner = None;
             }
-            if let Some(ui) = &self.alert_ui { let _ = ui.hide(); }
+            self.retire_alert_window();
         }
     }
     fn clear_alerts(&mut self) {
         self.close_alert(); self.close_clock_alert(); self.pending_clock = None; self.pending_clock_deadline = None;
+        self.retire_alert_window();
         self.alerts.clear(); self.player.stop(); self.sound_owner = None;
     }
     fn close_clock_alert(&mut self) {
         if let Some(alert) = self.clock_alert.take() {
             if self.sound_owner.as_deref() == Some(alert.token.as_str()) { self.player.stop(); self.sound_owner = None; }
-            if let Some(ui) = &self.alert_ui { let _ = ui.hide(); }
+            self.retire_alert_window();
         }
     }
-    /// The reminder window is shared by timer and clock alerts, so a dismissal
-    /// closes whichever kind is currently on screen.
+    fn retire_alert_window(&mut self) {
+        if let Some(ui) = self.alert_ui.take() {
+            let folders = self.folders.clone();
+            // Keep the event target alive until its button/native-close callback
+            // and the toolkit's default close handling have both returned. Native
+            // hide/destroy can dispatch events, so do that outside the App borrow.
+            slint::Timer::single_shot(Duration::ZERO, move || {
+                if let Err(error) = ui.hide() { folders.log(&format!("Hide reminder: {error}")); }
+                drop(ui);
+            });
+        }
+    }
+    /// Dismiss whichever kind is currently on screen, including an orphaned view.
     fn dismiss_alert(&mut self) {
         if self.alert.is_some() { self.close_alert(); } else { self.close_clock_alert(); }
+        self.retire_alert_window();
     }
     fn discard_cycle_alerts(&mut self, id: &str) {
         let sounding = self.alerts.iter().chain(self.alert.as_ref())
@@ -490,9 +504,9 @@ where for<'a> Theme<'a>: slint::Global<'a, C> {
     });
 }
 
-fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&slint::Window>)
+fn show_owned<C: ComponentHandle + 'static>(window: &C, parent: Option<&slint::Window>) -> Result<(), slint::PlatformError>
 where for<'a> Theme<'a>: slint::Global<'a, C> {
-    let _ = window.show();
+    window.show()?;
     let owner = parent.and_then(native::hwnd);
     apply_native_theme(window, owner);
     if let Some(parent) = parent {
@@ -503,60 +517,87 @@ where for<'a> Theme<'a>: slint::Global<'a, C> {
                 position.y + (owner_size.height as i32 - size.height as i32) / 2));
         }
     }
+    window.window().request_redraw();
     let weak = window.as_weak();
     slint::Timer::single_shot(Duration::from_millis(10), move || {
         // Read the live palette again: a theme change before this callback must
         // not restore the colors captured when the popup was first opened.
-        if let Some(window) = weak.upgrade() { apply_native_theme(&window, owner); }
+        if let Some(window) = weak.upgrade() {
+            if window.window().is_visible() {
+                apply_native_theme(&window, owner);
+                window.window().request_redraw();
+            }
+        }
     });
+    Ok(())
 }
 
-/// Creates the reminder window on first use and reuses it for every later
-/// reminder. Callbacks are wired once and read the live state through the
-/// controller, so the same window can serve timer and clock alerts.
+fn is_current_alert_window(controller: &Controller, generation: u64) -> bool {
+    let app = controller.borrow();
+    app.alert_ui.is_some() && app.alert_ui_generation == generation
+}
+
+/// A reminder owns one native/software-rendering window until it is dismissed.
+/// Never reopen a retired native surface for another round.
 fn ensure_alert_window(controller: &Controller) -> Option<AlertWindow> {
     if let Some(ui) = controller.borrow().alert_ui.as_ref().map(|ui| ui.clone_strong()) { return Some(ui); }
-    let ui = AlertWindow::new().ok()?;
+    let ui = match AlertWindow::new() {
+        Ok(ui) => ui,
+        Err(error) => { controller.borrow().folders.log(&format!("Create reminder: {error}")); return None; }
+    };
+    let generation = {
+        let mut state = controller.borrow_mut();
+        state.alert_ui_generation = state.alert_ui_generation.wrapping_add(1);
+        state.alert_ui_generation
+    };
     let weak = Rc::downgrade(controller);
-    ui.on_dismiss(move || { if let Some(app) = weak.upgrade() { app.borrow_mut().dismiss_alert(); present_alert(&app); } });
+    ui.on_dismiss(move || { if let Some(app) = weak.upgrade() {
+        if is_current_alert_window(&app, generation) { app.borrow_mut().dismiss_alert(); }
+    } });
     let weak = Rc::downgrade(controller);
     ui.on_quick_round(move |index| { if let Some(app) = weak.upgrade() {
+        if !is_current_alert_window(&app, generation) { return; }
         let seconds = app.borrow().engine.doc.settings.quick_snooze_seconds.get(index.max(0) as usize).copied();
         if let Some(seconds) = seconds { start_quick_round(&app, seconds); }
     } });
     let weak = Rc::downgrade(controller);
     ui.on_restart(move || { if let Some(app) = weak.upgrade() {
+        if !is_current_alert_window(&app, generation) { return; }
         let mut state = app.borrow_mut(); let id = state.alert.as_ref().map(|alert| alert.id.clone());
         if let Some(id) = id { state.engine.timer_action(&id, "reset"); }
-        state.close_alert(); state.commit(); state.refresh(); drop(state); present_alert(&app);
+        state.close_alert(); state.commit(); state.refresh();
     } });
     let weak = Rc::downgrade(controller);
     ui.window().on_close_requested(move || {
-        // The toolkit hides this same reusable window after the callback.
-        // Let the next scheduler tick display the following reminder.
-        if let Some(app) = weak.upgrade() { app.borrow_mut().dismiss_alert(); }
+        // The native event must finish before the next scheduler tick creates
+        // another reminder. Late events from an old window cannot dismiss it.
+        if let Some(app) = weak.upgrade() {
+            if is_current_alert_window(&app, generation) { app.borrow_mut().dismiss_alert(); }
+        }
         slint::CloseRequestResponse::HideWindow
     });
     controller.borrow_mut().alert_ui = Some(ui.clone_strong());
     Some(ui)
 }
 
-fn show_alert_window(controller: &Controller, ui: &AlertWindow) {
+fn show_alert_window(controller: &Controller, ui: &AlertWindow) -> Result<(), slint::PlatformError> {
     let parent = controller.borrow().ui.upgrade();
-    let state = controller.borrow();
-    show_owned(ui, if state.compact { Some(state.mini.window()) } else { parent.as_ref().map(|main| main.window()) });
+    let (compact, mini) = { let state = controller.borrow(); (state.compact, state.mini.clone_strong()) };
+    // Native show/position operations can dispatch events synchronously. Do not
+    // hold an App RefCell borrow while entering the window system.
+    show_owned(ui, if compact { Some(mini.window()) } else { parent.as_ref().map(|main| main.window()) })
 }
 
 fn present_alert(controller: &Controller) {
     {
-        let app = controller.borrow();
+        let mut app = controller.borrow_mut();
         if app.alert.is_some() || app.alerts.is_empty() { return; }
+        // Retire a lower-priority clock window before constructing this view.
+        app.close_clock_alert();
     }
     let Some(ui) = ensure_alert_window(controller) else { return; };
     let alert = {
         let mut app = controller.borrow_mut();
-        // An actual alarm/timer takes priority over a clock-chime notice.
-        app.close_clock_alert();
         app.alerts.pop_front()
     };
     let Some(alert) = alert else { return; };
@@ -574,7 +615,12 @@ fn present_alert(controller: &Controller) {
         let mut app = controller.borrow_mut();
         app.alert = Some(alert); app.refresh_alert_options();
     }
-    show_alert_window(controller, &ui);
+    if let Err(error) = show_alert_window(controller, &ui) {
+        let mut app = controller.borrow_mut();
+        app.folders.log(&format!("Show reminder: {error}"));
+        if let Some(alert) = app.alert.take() { app.alerts.push_front(alert); }
+        app.retire_alert_window();
+    }
 }
 
 fn present_clock_alert(controller: &Controller) {
@@ -584,15 +630,16 @@ fn present_clock_alert(controller: &Controller) {
             state.pending_clock = None; state.pending_clock_deadline = None;
         }
         if state.alert.is_some() || !state.alerts.is_empty() || state.pending_clock.is_none() { return; }
+        state.close_clock_alert();
     }
     let Some(ui) = ensure_alert_window(controller) else { return; };
-    let alert = {
+    let (alert, deadline) = {
         let mut state = controller.borrow_mut();
-        // The shared window shows one reminder at a time; the tick loop retries.
+        // Keep one active reminder; the tick loop retries any pending notice.
         if state.alert.is_some() { return; }
         let Some(alert) = state.pending_clock.take() else { return; };
-        state.pending_clock_deadline = None;
-        state.close_clock_alert(); alert
+        let deadline = state.pending_clock_deadline.take();
+        (alert, deadline)
     };
     {
         let app = controller.borrow();
@@ -602,7 +649,13 @@ fn present_clock_alert(controller: &Controller) {
     ui.set_clock_chime(true); ui.set_heading(i18n::t(&alert.title).into()); ui.set_label(alert.label.clone().into());
     ui.set_warning(false); ui.set_countdown(false);
     controller.borrow_mut().clock_alert = Some(alert);
-    show_alert_window(controller, &ui);
+    if let Err(error) = show_alert_window(controller, &ui) {
+        let mut state = controller.borrow_mut();
+        state.folders.log(&format!("Show clock reminder: {error}"));
+        state.pending_clock = state.clock_alert.take();
+        state.pending_clock_deadline = deadline;
+        state.retire_alert_window();
+    }
 }
 
 fn start_quick_round(controller: &Controller, seconds: u64) {
@@ -620,7 +673,7 @@ fn start_quick_round(controller: &Controller, seconds: u64) {
         state.engine.put_alarm(Alarm { id: data::new_id(), label: alert.label, hour: when.hour(), minute: when.minute(),
             days: 0, end_minute: None, fire_at: when.timestamp(), sound: alert.sound, warn_before: false, enabled: true });
     }
-    state.close_alert(); state.commit(); state.refresh(); drop(state); present_alert(controller);
+    state.close_alert(); state.commit(); state.refresh();
 }
 
 fn open_editor(controller: &Controller, id: Option<String>) {
@@ -757,7 +810,9 @@ fn confirm(controller: &Controller, action: Confirmation) {
         if !imported { state.commit(); } state.refresh();
     } });
     controller.borrow_mut().confirm = Some((ui.clone_strong(), action));
-    show_owned(&ui, parent.as_ref().map(|p| p.window()));
+    if let Err(error) = show_owned(&ui, parent.as_ref().map(|p| p.window())) {
+        controller.borrow().folders.log(&format!("Show confirmation: {error}"));
+    }
 }
 
 fn choose_audio(controller: &Controller) {
@@ -837,7 +892,10 @@ fn about(controller: &Controller) {
         if let Some(parent) = path.parent() { let _ = fs::create_dir_all(parent); }
         if fs::write(&path, text.as_bytes()).is_ok() { native::open(&path); }
     } });
-    controller.borrow_mut().about = Some(ui.clone_strong()); show_owned(&ui, parent.as_ref().map(|p| p.window()));
+    controller.borrow_mut().about = Some(ui.clone_strong());
+    if let Err(error) = show_owned(&ui, parent.as_ref().map(|p| p.window())) {
+        controller.borrow().folders.log(&format!("Show about window: {error}"));
+    }
 }
 
 fn bind(controller: &Controller, ui: &MainWindow) {
@@ -1085,7 +1143,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let app = Rc::new(RefCell::new(App { ui: ui.as_weak(), mini, compact: false, mini_positioned: false, engine: Engine::new(document, message), folders,
         player: audio::Player::default(), import: None, timer_rows, alarm_rows, day_rows, week_rows, focus_bars, countdown_names, alarm_names, week_offset: 0,
         week_day: Local::now().weekday().num_days_from_monday() as i32, editor: None, confirm: None, about: None,
-        alerts: VecDeque::new(), alert_ui: None, alert: None, clock_alert: None, pending_clock: None, pending_clock_deadline: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
+        alerts: VecDeque::new(), alert_ui: None, alert_ui_generation: 0, alert: None, clock_alert: None, pending_clock: None, pending_clock_deadline: None, sound_owner: None, quit_pending: false, import_notice: String::new(), preview_index: -1, preview_deadline: None,
         message_seen: String::new(), message_deadline: None }));
     app.borrow().restore_focus_draft();
     app.borrow().refresh_sound_library(); ui.set_draft_sound(app.borrow().sound_index(app.borrow().engine.doc.settings.default_sound)); bind(&app, &ui); app.borrow().apply_theme(); app.borrow_mut().refresh();

@@ -1,3 +1,13 @@
+# Timoa 1.3.2 · 2026-11-22
+
+- 修复部分情况下点击“再来一轮”后，提醒窗口空白、无法正常关闭的问题。
+- 调整提醒窗口的创建与释放时机，完善连续提醒的衔接和显示刷新。
+- 保留原有界面、主题、字体、计时功能与数据格式，继续提供 x64/x86 便携版及安装包。
+
+English: Fix blank or unresponsive reminders after starting another round. Improve reminder window lifecycle, queued notifications and repaint scheduling while preserving the existing interface, features and data format.
+
+---
+
 # Timoa 1.3.1 · 2026-11-14
 
 - 修复主题颜色按钮的模糊和横向拉伸变形，按按钮实际尺寸与屏幕缩放绘制。

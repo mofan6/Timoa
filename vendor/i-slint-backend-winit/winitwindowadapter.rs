@@ -1715,6 +1715,12 @@ impl WinitWindowAdapter {
             #[cfg(ios_and_friends)]
             self.request_redraw();
 
+            // Windows does not reliably post a fresh paint event when a hidden
+            // native window is shown again. The dirty region above alone does
+            // not schedule a frame; explicitly request one after mapping it.
+            #[cfg(target_os = "windows")]
+            self.request_redraw();
+
             Ok(())
         } else {
             // Release the context menu; it holds the menu item tree that keeps this adapter alive.
